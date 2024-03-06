@@ -1,0 +1,6 @@
+root = "."
+tmp_dir = "tmp"
+run_cmd = "./tmp/main"
+
+[build]
+cmd = "go build -o ./tmp/main ./cmd/multiplayer-server/main.go"
