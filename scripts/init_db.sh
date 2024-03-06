@@ -43,7 +43,7 @@ done
 
 >&2 echo "Postgres is up and running on port ${DB_PORT}!"
 
-export DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
-migrate -database ${DATABASE_URL} -path=db/migrations up all
+export DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?sslmode=disable
+migrate -database ${DATABASE_URL} -path=db/migrations up
 
 >&2 echo "Postgres has been migrated, ready to go!"
