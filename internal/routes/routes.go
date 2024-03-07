@@ -14,5 +14,7 @@ func NewRouter() http.Handler {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	mux.HandleFunc("POST /user", createUser)
+
 	return mux
 }
