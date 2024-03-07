@@ -1,28 +1,65 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/joho/godotenv"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
 	"github.com/rejdeboer/multiplayer-server/internal/middleware"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 )
 
-func main() {
-	godotenv.Load(".env")
-	logger := logger.Get()
+var log = logger.Get()
 
-	port := 8080
+func main() {
+	settings := configuration.GetConfiguration()
+
+	port := settings.Application.Port
 	addr := fmt.Sprintf(":%d", port)
 
-	handler := middleware.WithMiddleware(routes.NewRouter())
+	pool := getDbConnectionPool(settings.Database)
+	defer pool.Close()
 
-	logger.Info().Msg(fmt.Sprintf("Server listening on port %d", port))
+	handler := createHandler(pool)
+
+	log.Info().Msg(fmt.Sprintf("Server listening on port %d", port))
 
 	err := http.ListenAndServe(addr, handler)
 	if err != nil {
+		log.Error().Msg("failed to start server")
 		panic(err)
 	}
+}
+
+func createHandler(pool *pgxpool.Pool) http.Handler {
+	handler := routes.NewRouter()
+	handler = middleware.WithLogging(handler)
+	handler = middleware.WithDb(handler, pool)
+
+	return handler
+}
+
+func getDbConnectionPool(settings configuration.DatabaseSettings) *pgxpool.Pool {
+	dbUrl := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
+		settings.Username,
+		settings.Password,
+		settings.Host,
+		settings.Port,
+		settings.DbName,
+	)
+
+	if !settings.RequireSsl {
+		dbUrl = dbUrl + "?sslmode=disable"
+	}
+
+	pool, err := pgxpool.New(context.Background(), dbUrl)
+	if err != nil {
+		log.Error().Msg("failed to connect to db")
+		panic(err)
+	}
+
+	return pool
 }

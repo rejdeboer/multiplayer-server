@@ -1,18 +1,16 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
 	"github.com/rs/zerolog/hlog"
 )
 
-func WithMiddleware(h http.Handler) http.Handler {
-	return withLogging(h)
-}
-
-func withLogging(next http.Handler) http.Handler {
+func WithLogging(next http.Handler) http.Handler {
 	l := logger.Get()
 	hlogHandler := hlog.NewHandler(l)
 
@@ -29,4 +27,11 @@ func withLogging(next http.Handler) http.Handler {
 	requestIdHandler := hlog.RequestIDHandler("req_id", "Request-Id")
 
 	return hlogHandler(accessHandler(userAgentHandler(requestIdHandler(next))))
+}
+
+func WithDb(next http.Handler, pool *pgxpool.Pool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), "pool", pool)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }

@@ -30,7 +30,7 @@ func Get() zerolog.Logger {
 			TimeFormat: time.RFC3339,
 		}
 
-		if os.Getenv("APP_ENV") != "development" {
+		if os.Getenv("ENVIRONMENT") != "" {
 			output = zerolog.MultiLevelWriter(os.Stderr)
 		}
 
