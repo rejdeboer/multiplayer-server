@@ -15,6 +15,7 @@ func NewRouter() http.Handler {
 	})
 
 	mux.HandleFunc("POST /user", createUser)
+	mux.HandleFunc("POST /token", getToken)
 
 	return mux
 }
