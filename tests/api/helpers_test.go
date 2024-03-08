@@ -14,6 +14,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/rejdeboer/multiplayer-server/internal/middleware"
@@ -27,7 +28,7 @@ func TestMain(m *testing.M) {
 
 	postgresContainer := createPostgresContainer(dockerPool)
 	hostAndPort := postgresContainer.GetHostPort("5432/tcp")
-	databaseUrl := fmt.Sprintf("postgres://postgres:postgres@%s/voting?sslmode=disable", hostAndPort)
+	databaseUrl := fmt.Sprintf("postgres://postgres:postgres@%s/multiplayer?sslmode=disable", hostAndPort)
 
 	if err := dockerPool.Retry(waitPostgresContainerToBeReady(databaseUrl)); err != nil {
 		log.Fatalf("postgres container not intialized: %s", err)
@@ -106,7 +107,7 @@ func startMigration(databaseUrl string) {
 	}
 
 	migrate, err := migrate.NewWithDatabaseInstance(
-		"file://db/migrations",
+		"file://../../db/migrations",
 		"pgx", driver)
 	if err != nil {
 		log.Fatalf("could not apply the migration: %s", err)

@@ -51,6 +51,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	id, _ := createdUser.ID.Value()
 
 	log.Info().Any("id", id).Msg("created new user")
+	w.WriteHeader(http.StatusOK)
 }
 
 func hashPassword(password string) (string, error) {
