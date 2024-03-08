@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,10 +18,13 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/middleware"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 )
 
+var once sync.Once
+var handler http.Handler
 var dbpool *pgxpool.Pool
 
 func TestMain(m *testing.M) {
@@ -117,9 +121,13 @@ func startMigration(databaseUrl string) {
 }
 
 func GetTestingHandler() http.Handler {
-	handler := routes.NewRouter()
-	handler = middleware.WithLogging(handler)
-	handler = middleware.WithDb(handler, dbpool)
+	once.Do(func() {
+		settings := configuration.GetConfiguration()
+
+		handler = routes.NewRouter(settings.Application)
+		handler = middleware.WithLogging(handler)
+		handler = middleware.WithDb(handler, dbpool)
+	})
 
 	return handler
 }

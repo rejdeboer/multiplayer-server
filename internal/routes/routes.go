@@ -1,11 +1,13 @@
 package routes
 
 import (
-	"github.com/rs/zerolog"
 	"net/http"
+
+	"github.com/rejdeboer/multiplayer-server/internal/configuration"
+	"github.com/rs/zerolog"
 )
 
-func NewRouter() http.Handler {
+func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -15,7 +17,7 @@ func NewRouter() http.Handler {
 	})
 
 	mux.HandleFunc("POST /user", createUser)
-	mux.HandleFunc("POST /token", getToken)
+	mux.HandleFunc("POST /token", getToken(settings.SigningKey))
 
 	return mux
 }

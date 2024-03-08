@@ -2,8 +2,11 @@ package configuration
 
 import (
 	"fmt"
-	yaml "gopkg.in/yaml.v3"
 	"os"
+	"runtime"
+	"strings"
+
+	yaml "gopkg.in/yaml.v3"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -23,7 +26,8 @@ type DatabaseSettings struct {
 }
 
 type ApplicationSettings struct {
-	Port uint16 `yaml:"port"`
+	Port       uint16 `yaml:"port"`
+	SigningKey string `yaml:"siging_key"`
 }
 
 func GetConfiguration() Settings {
@@ -34,18 +38,23 @@ func GetConfiguration() Settings {
 }
 
 func readFiles(settings *Settings) {
-	readFile(settings, "base")
+	// Figure out the relative path to the config
+	// Because tests are executed with a different working directory
+	_, filename, _, _ := runtime.Caller(0)
+	pathPrefix := strings.Split(filename, "multiplayer-server")[0] + "multiplayer-server"
+
+	readFile(pathPrefix, settings, "base")
 
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "local"
 	}
 
-	readFile(settings, environment)
+	readFile(pathPrefix, settings, environment)
 }
 
-func readFile(settings *Settings, name string) {
-	f, err := os.Open(fmt.Sprintf("configuration/%s.yml", name))
+func readFile(prefix string, settings *Settings, name string) {
+	f, err := os.Open(fmt.Sprintf("%s/configuration/%s.yml", prefix, name))
 	if err != nil {
 		panic(err)
 	}

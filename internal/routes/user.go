@@ -53,7 +53,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		Passhash: passhash,
 	})
 	if err != nil {
-		http.Error(w, "unexpected error", http.StatusInternalServerError)
+		internalServerError(w)
 		log.Error().Err(err).Msg("failed to push user to db")
 		return
 	}

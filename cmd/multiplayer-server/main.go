@@ -23,7 +23,7 @@ func main() {
 	pool := getDbConnectionPool(settings.Database)
 	defer pool.Close()
 
-	handler := createHandler(pool)
+	handler := createHandler(settings.Application, pool)
 
 	log.Info().Msg(fmt.Sprintf("Server listening on port %d", port))
 
@@ -34,8 +34,8 @@ func main() {
 	}
 }
 
-func createHandler(pool *pgxpool.Pool) http.Handler {
-	handler := routes.NewRouter()
+func createHandler(settings configuration.ApplicationSettings, pool *pgxpool.Pool) http.Handler {
+	handler := routes.NewRouter(settings)
 	handler = middleware.WithLogging(handler)
 	handler = middleware.WithDb(handler, pool)
 
