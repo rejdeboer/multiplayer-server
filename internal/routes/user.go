@@ -2,7 +2,10 @@ package routes
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/mail"
+	"unicode"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
@@ -24,6 +27,13 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid body for create user")
+		return
+	}
+
+	err = validateUserCreate(user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Error().Err(err).Msg("invalid payload")
 		return
 	}
 
@@ -59,7 +69,44 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func checkPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
+func validateUserCreate(userCreate UserCreate) error {
+	_, err := mail.ParseAddress(userCreate.Email)
+	if err != nil {
+		return err
+	}
+
+	return validatePassword(userCreate.Password)
+}
+
+func validatePassword(password string) error {
+	if len(password) < 8 {
+		return fmt.Errorf("password length must be at least 8 characters")
+	}
+
+	hasLowerCase := false
+	hasDigit := false
+	hasSpecial := false
+
+	for _, char := range password {
+		switch {
+		case unicode.IsLower(char):
+			hasLowerCase = true
+		case unicode.IsDigit(char):
+			hasDigit = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+
+	if !hasLowerCase {
+		return fmt.Errorf("password must contain at least one lowercase letter")
+	}
+	if !hasDigit {
+		return fmt.Errorf("password must contain at least one digit")
+	}
+	if !hasSpecial {
+		return fmt.Errorf("password must contain at least one special character")
+	}
+
+	return nil
 }
