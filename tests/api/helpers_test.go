@@ -32,7 +32,7 @@ var dbpool *pgxpool.Pool
 
 type TestApp struct {
 	handler http.Handler
-	user    db.User
+	user    routes.UserCreate
 }
 
 func TestMain(m *testing.M) {
@@ -147,7 +147,7 @@ func GetTestApp() TestApp {
 	return testApp
 }
 
-func createTestUser() db.User {
+func createTestUser() routes.UserCreate {
 	q := db.New(dbpool)
 
 	password := gofakeit.Password(true, true, true, true, false, 8)
@@ -166,5 +166,8 @@ func createTestUser() db.User {
 		log.Fatalf("error storing test user in db: %s", err)
 	}
 
-	return user
+	return routes.UserCreate{
+		Email:    user.Email,
+		Password: password,
+	}
 }

@@ -14,8 +14,8 @@ import (
 )
 
 type UserCredentials struct {
-	email    string
-	password string
+	Email    string
+	Password string
 }
 
 func getToken(signingKey string) http.HandlerFunc {
@@ -34,14 +34,14 @@ func getToken(signingKey string) http.HandlerFunc {
 		pool := ctx.Value("pool").(*pgxpool.Pool)
 		q := db.New(pool)
 
-		user, err := q.GetUserByEmail(ctx, credentials.email)
+		user, err := q.GetUserByEmail(ctx, credentials.Email)
 		if err != nil {
 			http.Error(w, "invalid email or password", http.StatusUnauthorized)
-			log.Error().Err(err).Str("email", credentials.email).Msg("user with email does not exist")
+			log.Error().Err(err).Str("email", credentials.Email).Msg("user with email does not exist")
 			return
 		}
 
-		if !checkPasswordHash(credentials.password, user.Passhash) {
+		if !checkPasswordHash(credentials.Password, user.Passhash) {
 			http.Error(w, "invalid email or password", http.StatusUnauthorized)
 			log.Error().Err(err).Msg("user entered wrong password")
 			return
@@ -71,7 +71,7 @@ func getJwt(signingKey string, username string) (string, error) {
 	claims["username"] = username
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 
-	tokenString, err := token.SignedString(signingKey)
+	tokenString, err := token.SignedString([]byte(signingKey))
 	if err != nil {
 		return "", err
 	}
