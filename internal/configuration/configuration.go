@@ -3,8 +3,6 @@ package configuration
 import (
 	"fmt"
 	"os"
-	"runtime"
-	"strings"
 
 	yaml "gopkg.in/yaml.v3"
 
@@ -30,31 +28,26 @@ type ApplicationSettings struct {
 	SigningKey string `yaml:"siging_key"`
 }
 
-func GetConfiguration() Settings {
+func ReadConfiguration(path string) Settings {
 	var settings Settings
-	readFiles(&settings)
+	readFiles(&settings, path)
 	readEnv(&settings)
 	return settings
 }
 
-func readFiles(settings *Settings) {
-	// Figure out the relative path to the config
-	// Because tests are executed with a different working directory
-	_, filename, _, _ := runtime.Caller(0)
-	pathPrefix := strings.Split(filename, "multiplayer-server")[0] + "multiplayer-server"
-
-	readFile(pathPrefix, settings, "base")
+func readFiles(settings *Settings, path string) {
+	readFile(path, settings, "base")
 
 	environment := os.Getenv("ENVIRONMENT")
 	if environment == "" {
 		environment = "local"
 	}
 
-	readFile(pathPrefix, settings, environment)
+	readFile(path, settings, environment)
 }
 
-func readFile(prefix string, settings *Settings, name string) {
-	f, err := os.Open(fmt.Sprintf("%s/configuration/%s.yml", prefix, name))
+func readFile(path string, settings *Settings, name string) {
+	f, err := os.Open(fmt.Sprintf("%s/%s.yml", path, name))
 	if err != nil {
 		panic(err)
 	}

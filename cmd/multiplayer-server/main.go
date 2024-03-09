@@ -15,7 +15,7 @@ import (
 var log = logger.Get()
 
 func main() {
-	settings := configuration.GetConfiguration()
+	settings := configuration.ReadConfiguration("./configuration")
 
 	port := settings.Application.Port
 	addr := fmt.Sprintf(":%d", port)

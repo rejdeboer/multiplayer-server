@@ -122,7 +122,7 @@ func startMigration(databaseUrl string) {
 
 func GetTestingHandler() http.Handler {
 	once.Do(func() {
-		settings := configuration.GetConfiguration()
+		settings := configuration.ReadConfiguration("../../configuration")
 
 		handler = routes.NewRouter(settings.Application)
 		handler = middleware.WithLogging(handler)
