@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/mail"
@@ -18,6 +19,11 @@ type UserCreate struct {
 	Password string
 }
 
+type UserResponse struct {
+	ID    string
+	Email string
+}
+
 func createUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
@@ -25,21 +31,21 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	var user UserCreate
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid body for create user")
 		return
 	}
 
 	err = validateUserCreate(user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid payload")
 		return
 	}
 
 	passhash, err := hashPassword(user.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid password")
 		return
 	}
@@ -58,10 +64,21 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, _ := createdUser.ID.Value()
+	userId, _ := createdUser.ID.Value()
 
-	log.Info().Any("id", id).Msg("created new user")
+	response, err := json.Marshal(UserResponse{
+		ID:    userId.(string),
+		Email: user.Email,
+	})
+	if err != nil {
+		internalServerError(w)
+		log.Error().Err(err).Msg("error marshalling response")
+		return
+	}
+
+	log.Info().Any("user_id", userId).Msg("created new user")
 	w.WriteHeader(http.StatusOK)
+	w.Write(response)
 }
 
 func hashPassword(password string) (string, error) {
@@ -72,7 +89,7 @@ func hashPassword(password string) (string, error) {
 func validateUserCreate(userCreate UserCreate) error {
 	_, err := mail.ParseAddress(userCreate.Email)
 	if err != nil {
-		return err
+		return errors.New("invalid email address")
 	}
 
 	return validatePassword(userCreate.Password)

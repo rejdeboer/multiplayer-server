@@ -26,7 +26,7 @@ func getToken(signingKey string) http.HandlerFunc {
 		var credentials UserCredentials
 		err := json.NewDecoder(r.Body).Decode(&credentials)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			writeError(w, err.Error(), http.StatusBadRequest)
 			log.Error().Err(err).Msg("invalid payload")
 			return
 		}
@@ -36,13 +36,13 @@ func getToken(signingKey string) http.HandlerFunc {
 
 		user, err := q.GetUserByEmail(ctx, credentials.Email)
 		if err != nil {
-			http.Error(w, "invalid email or password", http.StatusUnauthorized)
+			writeError(w, "invalid email or password", http.StatusUnauthorized)
 			log.Error().Err(err).Str("email", credentials.Email).Msg("user with email does not exist")
 			return
 		}
 
 		if !checkPasswordHash(credentials.Password, user.Passhash) {
-			http.Error(w, "invalid email or password", http.StatusUnauthorized)
+			writeError(w, "invalid email or password", http.StatusUnauthorized)
 			log.Error().Err(err).Msg("user entered wrong password")
 			return
 		}
@@ -54,6 +54,9 @@ func getToken(signingKey string) http.HandlerFunc {
 			return
 		}
 
+		userId, _ := user.ID.Value()
+
+		log.Info().Any("user_id", userId).Msg("successful authentication")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, token)
 	}
