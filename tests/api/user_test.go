@@ -52,7 +52,7 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
-	handler := GetTestingHandler()
+	testApp := GetTestApp()
 	for _, testCase := range cases {
 		bodyBytes, err := json.Marshal(testCase.input)
 		if err != nil {
@@ -66,7 +66,7 @@ func TestCreateUser(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		handler.ServeHTTP(rr, req)
+		testApp.handler.ServeHTTP(rr, req)
 
 		if rr.Result().StatusCode != testCase.outputStatusCode {
 			t.Errorf("expected %d got %d", testCase.outputStatusCode, rr.Result().StatusCode)

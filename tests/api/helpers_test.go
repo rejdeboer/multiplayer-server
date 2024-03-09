@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brianvoe/gofakeit"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -19,13 +20,20 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
+	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/internal/middleware"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var once sync.Once
-var handler http.Handler
+var testApp TestApp
 var dbpool *pgxpool.Pool
+
+type TestApp struct {
+	handler http.Handler
+	user    db.User
+}
 
 func TestMain(m *testing.M) {
 	dockerPool := initDocker()
@@ -120,14 +128,43 @@ func startMigration(databaseUrl string) {
 	migrate.Up()
 }
 
-func GetTestingHandler() http.Handler {
+func GetTestApp() TestApp {
 	once.Do(func() {
 		settings := configuration.ReadConfiguration("../../configuration")
 
-		handler = routes.NewRouter(settings.Application)
+		handler := routes.NewRouter(settings.Application)
 		handler = middleware.WithLogging(handler)
 		handler = middleware.WithDb(handler, dbpool)
+
+		user := createTestUser()
+
+		testApp = TestApp{
+			handler: handler,
+			user:    user,
+		}
 	})
 
-	return handler
+	return testApp
+}
+
+func createTestUser() db.User {
+	q := db.New(dbpool)
+
+	password := gofakeit.Password(true, true, true, true, false, 8)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("error hashing test user password: %s", err)
+	}
+
+	passhash := string(bytes)
+
+	user, err := q.CreateUser(context.Background(), db.CreateUserParams{
+		Email:    gofakeit.Email(),
+		Passhash: passhash,
+	})
+	if err != nil {
+		log.Fatalf("error storing test user in db: %s", err)
+	}
+
+	return user
 }
