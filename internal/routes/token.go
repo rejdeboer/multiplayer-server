@@ -8,6 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
+	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -29,7 +30,7 @@ func getToken(signingKey string) http.HandlerFunc {
 		var credentials UserCredentials
 		err := json.NewDecoder(r.Body).Decode(&credentials)
 		if err != nil {
-			writeError(w, err.Error(), http.StatusBadRequest)
+			httperrors.Write(w, err.Error(), http.StatusBadRequest)
 			log.Error().Err(err).Msg("invalid payload")
 			return
 		}
@@ -39,20 +40,20 @@ func getToken(signingKey string) http.HandlerFunc {
 
 		user, err := q.GetUserByEmail(ctx, credentials.Email)
 		if err != nil {
-			writeError(w, "invalid email or password", http.StatusUnauthorized)
+			httperrors.Write(w, "invalid email or password", http.StatusUnauthorized)
 			log.Error().Err(err).Str("email", credentials.Email).Msg("user with email does not exist")
 			return
 		}
 
 		if !checkPasswordHash(credentials.Password, user.Passhash) {
-			writeError(w, "invalid email or password", http.StatusUnauthorized)
+			httperrors.Write(w, "invalid email or password", http.StatusUnauthorized)
 			log.Error().Err(err).Msg("user entered wrong password")
 			return
 		}
 
 		token, err := getJwt(signingKey, user.Username)
 		if err != nil {
-			internalServerError(w)
+			httperrors.InternalServerError(w)
 			log.Error().Err(err).Msg("error signing jwt")
 			return
 		}
@@ -63,7 +64,7 @@ func getToken(signingKey string) http.HandlerFunc {
 			Token: token,
 		})
 		if err != nil {
-			internalServerError(w)
+			httperrors.InternalServerError(w)
 			log.Error().Err(err).Msg("error marshalling response")
 			return
 		}

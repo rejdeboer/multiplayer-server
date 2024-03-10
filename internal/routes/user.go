@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
+	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -33,21 +34,21 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	var user UserCreate
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		writeError(w, err.Error(), http.StatusBadRequest)
+		httperrors.Write(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid body for create user")
 		return
 	}
 
 	err = validateUserCreate(user)
 	if err != nil {
-		writeError(w, err.Error(), http.StatusBadRequest)
+		httperrors.Write(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid payload")
 		return
 	}
 
 	passhash, err := hashPassword(user.Password)
 	if err != nil {
-		writeError(w, err.Error(), http.StatusBadRequest)
+		httperrors.Write(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid password")
 		return
 	}
@@ -62,7 +63,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		Passhash: passhash,
 	})
 	if err != nil {
-		internalServerError(w)
+		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("failed to push user to db")
 		return
 	}
@@ -75,7 +76,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		Username: user.Username,
 	})
 	if err != nil {
-		internalServerError(w)
+		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("error marshalling response")
 		return
 	}

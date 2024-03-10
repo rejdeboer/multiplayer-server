@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -31,7 +32,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
-			outputBody: routes.ErrorResponse{
+			outputBody: httperrors.Response{
 				Message: "invalid email address",
 				Status:  400,
 			},
@@ -43,7 +44,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
-			outputBody: routes.ErrorResponse{
+			outputBody: httperrors.Response{
 				Message: "invalid email address",
 				Status:  400,
 			},
@@ -55,7 +56,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
-			outputBody: routes.ErrorResponse{
+			outputBody: httperrors.Response{
 				Message: "username can not contain any special characters",
 				Status:  400,
 			},
@@ -67,7 +68,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
-			outputBody: routes.ErrorResponse{
+			outputBody: httperrors.Response{
 				Message: "password must contain at least one digit",
 				Status:  400,
 			},
@@ -79,7 +80,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
-			outputBody: routes.ErrorResponse{
+			outputBody: httperrors.Response{
 				Message: "password must contain at least one special character",
 				Status:  400,
 			},
@@ -112,7 +113,7 @@ func TestCreateUser(t *testing.T) {
 		}
 
 		if status != 200 {
-			var response routes.ErrorResponse
+			var response httperrors.Response
 			err = json.NewDecoder(rr.Body).Decode(&response)
 			if err != nil {
 				t.Errorf("error decoding json response: %v", err)

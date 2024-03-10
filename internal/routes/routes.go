@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
+	"github.com/rejdeboer/multiplayer-server/internal/routes/middleware"
 	"github.com/rejdeboer/multiplayer-server/internal/websocket"
 	"github.com/rs/zerolog"
 )
@@ -22,7 +23,7 @@ func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 
 	mux.HandleFunc("POST /user", createUser)
 	mux.HandleFunc("POST /token", getToken(settings.SigningKey))
-	mux.HandleFunc("GET /websocket", handleWebSocket(hub, settings))
+	mux.HandleFunc("GET /websocket", middleware.WithAuth(handleWebSocket(hub), settings.SigningKey))
 
 	return mux
 }

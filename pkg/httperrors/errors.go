@@ -1,4 +1,4 @@
-package routes
+package httperrors
 
 import (
 	"encoding/json"
@@ -8,20 +8,20 @@ import (
 
 var log = logger.Get()
 
-type ErrorResponse struct {
+type Response struct {
 	Message string `json:"message"`
 	Status  int    `json:"status"`
 }
 
-func internalServerError(w http.ResponseWriter) {
-	writeError(w, "an unexpected error occured, please try again later", http.StatusInternalServerError)
+func InternalServerError(w http.ResponseWriter) {
+	Write(w, "an unexpected error occured, please try again later", http.StatusInternalServerError)
 }
 
-func writeError(w http.ResponseWriter, message string, code int) {
+func Write(w http.ResponseWriter, message string, code int) {
 	w.Header().Set("Content-Type", "text/json; charset=utf-8")
 	w.WriteHeader(code)
 
-	response, err := json.Marshal(ErrorResponse{
+	response, err := json.Marshal(Response{
 		Message: message,
 		Status:  code,
 	})

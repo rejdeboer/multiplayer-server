@@ -9,6 +9,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 )
 
 func TestGetToken(t *testing.T) {
@@ -61,7 +62,7 @@ func TestGetToken(t *testing.T) {
 				t.Errorf("expected %d got %d", testCase.outputStatusCode, rr.Result().StatusCode)
 			}
 
-			var response routes.ErrorResponse
+			var response httperrors.Response
 			err = json.NewDecoder(rr.Body).Decode(&response)
 			if err != nil {
 				t.Errorf("error decoding response: %s", err)
