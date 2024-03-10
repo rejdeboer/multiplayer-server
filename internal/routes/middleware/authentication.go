@@ -37,7 +37,7 @@ func WithAuth(next http.Handler, signingKey string) http.HandlerFunc {
 			return
 		}
 
-		ctx = context.WithValue(ctx, "username", claims["username"])
+		ctx = context.WithValue(ctx, "user_id", claims["user_id"])
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

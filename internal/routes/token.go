@@ -51,14 +51,14 @@ func getToken(signingKey string) http.HandlerFunc {
 			return
 		}
 
-		token, err := getJwt(signingKey, user.Username)
+		userId, _ := user.ID.Value()
+
+		token, err := getJwt(signingKey, userId.(string), user.Username)
 		if err != nil {
 			httperrors.InternalServerError(w)
 			log.Error().Err(err).Msg("error signing jwt")
 			return
 		}
-
-		userId, _ := user.ID.Value()
 
 		response, err := json.Marshal(TokenResponse{
 			Token: token,
@@ -80,11 +80,12 @@ func checkPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func getJwt(signingKey string, username string) (string, error) {
+func getJwt(signingKey string, userId string, username string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = username
+	claims["user_id"] = userId
 	claims["exp"] = time.Now().Add(time.Hour * 4).Unix()
 
 	tokenString, err := token.SignedString([]byte(signingKey))
