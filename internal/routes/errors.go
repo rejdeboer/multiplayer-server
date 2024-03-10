@@ -9,8 +9,8 @@ import (
 var log = logger.Get()
 
 type ErrorResponse struct {
-	Message string
-	Status  int
+	Message string `json:"message"`
+	Status  int    `json:"status"`
 }
 
 func internalServerError(w http.ResponseWriter) {

@@ -2,7 +2,6 @@ package routes
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -14,8 +13,12 @@ import (
 )
 
 type UserCredentials struct {
-	Email    string
-	Password string
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type TokenResponse struct {
+	Token string `json:"token"`
 }
 
 func getToken(signingKey string) http.HandlerFunc {
@@ -56,9 +59,18 @@ func getToken(signingKey string) http.HandlerFunc {
 
 		userId, _ := user.ID.Value()
 
+		response, err := json.Marshal(TokenResponse{
+			Token: token,
+		})
+		if err != nil {
+			internalServerError(w)
+			log.Error().Err(err).Msg("error marshalling response")
+			return
+		}
+
 		log.Info().Any("user_id", userId).Msg("successful authentication")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, token)
+		w.Write(response)
 	}
 }
 

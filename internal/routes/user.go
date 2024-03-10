@@ -15,13 +15,13 @@ import (
 )
 
 type UserCreate struct {
-	Email    string
-	Password string
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type UserResponse struct {
-	ID    string
-	Email string
+	ID    string `json:"id"`
+	Email string `json:"email"`
 }
 
 func createUser(w http.ResponseWriter, r *http.Request) {

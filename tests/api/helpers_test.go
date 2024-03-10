@@ -31,8 +31,29 @@ var testApp TestApp
 var dbpool *pgxpool.Pool
 
 type TestApp struct {
-	handler http.Handler
-	user    routes.UserCreate
+	handler  http.Handler
+	user     routes.UserCreate
+	settings configuration.ApplicationSettings
+}
+
+func GetTestApp() TestApp {
+	once.Do(func() {
+		settings := configuration.ReadConfiguration("../../configuration")
+
+		handler := routes.NewRouter(settings.Application)
+		handler = middleware.WithLogging(handler)
+		handler = middleware.WithDb(handler, dbpool)
+
+		user := createTestUser()
+
+		testApp = TestApp{
+			handler:  handler,
+			user:     user,
+			settings: settings.Application,
+		}
+	})
+
+	return testApp
 }
 
 func TestMain(m *testing.M) {
@@ -126,25 +147,6 @@ func startMigration(databaseUrl string) {
 	}
 
 	migrate.Up()
-}
-
-func GetTestApp() TestApp {
-	once.Do(func() {
-		settings := configuration.ReadConfiguration("../../configuration")
-
-		handler := routes.NewRouter(settings.Application)
-		handler = middleware.WithLogging(handler)
-		handler = middleware.WithDb(handler, dbpool)
-
-		user := createTestUser()
-
-		testApp = TestApp{
-			handler: handler,
-			user:    user,
-		}
-	})
-
-	return testApp
 }
 
 func createTestUser() routes.UserCreate {

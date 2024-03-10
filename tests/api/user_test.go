@@ -14,9 +14,14 @@ func TestCreateUser(t *testing.T) {
 	cases := []struct {
 		input            routes.UserCreate
 		outputStatusCode int
+		outputBody       interface{}
 	}{
 		{
 			outputStatusCode: 200,
+			outputBody: routes.UserResponse{
+				ID:    "",
+				Email: "rick.deboer@live.nl",
+			},
 			input: routes.UserCreate{
 				Email:    "rick.deboer@live.nl",
 				Password: "Very$ecret1",
@@ -24,6 +29,10 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
+			outputBody: routes.ErrorResponse{
+				Message: "invalid email address",
+				Status:  400,
+			},
 			input: routes.UserCreate{
 				Email:    "",
 				Password: "Very$ecret1",
@@ -31,6 +40,10 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
+			outputBody: routes.ErrorResponse{
+				Message: "invalid email address",
+				Status:  400,
+			},
 			input: routes.UserCreate{
 				Email:    "rick.deboerlive.nl",
 				Password: "Very$ecret1",
@@ -38,6 +51,10 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
+			outputBody: routes.ErrorResponse{
+				Message: "password must contain at least one digit",
+				Status:  400,
+			},
 			input: routes.UserCreate{
 				Email:    "rick.deboer@live.nl",
 				Password: "Very$ecret",
@@ -45,6 +62,10 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			outputStatusCode: 400,
+			outputBody: routes.ErrorResponse{
+				Message: "password must contain at least one special character",
+				Status:  400,
+			},
 			input: routes.UserCreate{
 				Email:    "rick.deboer@live.nl",
 				Password: "Verysecret1",
@@ -68,8 +89,32 @@ func TestCreateUser(t *testing.T) {
 
 		testApp.handler.ServeHTTP(rr, req)
 
-		if rr.Result().StatusCode != testCase.outputStatusCode {
+		status := rr.Result().StatusCode
+		if status != testCase.outputStatusCode {
 			t.Errorf("expected %d got %d", testCase.outputStatusCode, rr.Result().StatusCode)
+		}
+
+		if status != 200 {
+			var response routes.ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&response)
+			if err != nil {
+				t.Errorf("error decoding json response: %v", err)
+			}
+			if response != testCase.outputBody {
+				t.Errorf("output body mismatch; expected %v; got %v", testCase.outputBody, response)
+			}
+			return
+		}
+
+		var response routes.UserResponse
+		err = json.NewDecoder(rr.Body).Decode(&response)
+		if err != nil {
+			t.Errorf("error decoding json response: %v", err)
+		}
+
+		response.ID = ""
+		if response != testCase.outputBody {
+			t.Errorf("output body mismatch; expected %v; got %v", testCase.outputBody, response)
 		}
 	}
 }
