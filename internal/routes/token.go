@@ -84,7 +84,7 @@ func getJwt(signingKey string, username string) (string, error) {
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = username
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+	claims["exp"] = time.Now().Add(time.Hour * 4).Unix()
 
 	tokenString, err := token.SignedString([]byte(signingKey))
 	if err != nil {

@@ -4,11 +4,15 @@ import (
 	"net/http"
 
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
+	"github.com/rejdeboer/multiplayer-server/internal/websocket"
 	"github.com/rs/zerolog"
 )
 
 func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 	mux := http.NewServeMux()
+
+	hub := websocket.NewHub()
+	go hub.Run()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		l := zerolog.Ctx(r.Context())
@@ -18,6 +22,7 @@ func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 
 	mux.HandleFunc("POST /user", createUser)
 	mux.HandleFunc("POST /token", getToken(settings.SigningKey))
+	mux.HandleFunc("GET /websocket", handleWebSocket(hub, settings))
 
 	return mux
 }
