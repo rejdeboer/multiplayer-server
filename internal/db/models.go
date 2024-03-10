@@ -11,5 +11,6 @@ import (
 type User struct {
 	ID       pgtype.UUID
 	Email    string
+	Username string
 	Passhash string
 }

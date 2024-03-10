@@ -16,12 +16,14 @@ import (
 
 type UserCreate struct {
 	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
 type UserResponse struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
 }
 
 func createUser(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +58,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 
 	createdUser, err := q.CreateUser(ctx, db.CreateUserParams{
 		Email:    user.Email,
+		Username: user.Username,
 		Passhash: passhash,
 	})
 	if err != nil {
@@ -67,8 +70,9 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	userId, _ := createdUser.ID.Value()
 
 	response, err := json.Marshal(UserResponse{
-		ID:    userId.(string),
-		Email: user.Email,
+		ID:       userId.(string),
+		Email:    user.Email,
+		Username: user.Username,
 	})
 	if err != nil {
 		internalServerError(w)

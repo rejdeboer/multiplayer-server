@@ -153,6 +153,7 @@ func createTestUser() routes.UserCreate {
 	q := db.New(dbpool)
 
 	password := gofakeit.Password(true, true, true, true, false, 8)
+	username := gofakeit.Username()
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatalf("error hashing test user password: %s", err)
@@ -162,6 +163,7 @@ func createTestUser() routes.UserCreate {
 
 	user, err := q.CreateUser(context.Background(), db.CreateUserParams{
 		Email:    gofakeit.Email(),
+		Username: username,
 		Passhash: passhash,
 	})
 	if err != nil {
@@ -170,6 +172,7 @@ func createTestUser() routes.UserCreate {
 
 	return routes.UserCreate{
 		Email:    user.Email,
+		Username: user.Username,
 		Password: password,
 	}
 }

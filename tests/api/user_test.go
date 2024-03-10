@@ -19,11 +19,13 @@ func TestCreateUser(t *testing.T) {
 		{
 			outputStatusCode: 200,
 			outputBody: routes.UserResponse{
-				ID:    "",
-				Email: "rick.deboer@live.nl",
+				ID:       "",
+				Email:    "rick.deboer@live.nl",
+				Username: "rejdeboer",
 			},
 			input: routes.UserCreate{
 				Email:    "rick.deboer@live.nl",
+				Username: "rejdeboer",
 				Password: "Very$ecret1",
 			},
 		},
@@ -35,6 +37,7 @@ func TestCreateUser(t *testing.T) {
 			},
 			input: routes.UserCreate{
 				Email:    "",
+				Username: "rejdeboer",
 				Password: "Very$ecret1",
 			},
 		},
@@ -46,6 +49,7 @@ func TestCreateUser(t *testing.T) {
 			},
 			input: routes.UserCreate{
 				Email:    "rick.deboerlive.nl",
+				Username: "rejdeboer",
 				Password: "Very$ecret1",
 			},
 		},
@@ -57,6 +61,7 @@ func TestCreateUser(t *testing.T) {
 			},
 			input: routes.UserCreate{
 				Email:    "rick.deboer@live.nl",
+				Username: "rejdeboer",
 				Password: "Very$ecret",
 			},
 		},
