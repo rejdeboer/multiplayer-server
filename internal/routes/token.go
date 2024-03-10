@@ -50,7 +50,7 @@ func getToken(signingKey string) http.HandlerFunc {
 			return
 		}
 
-		token, err := getJwt(signingKey, user.Email)
+		token, err := getJwt(signingKey, user.Username)
 		if err != nil {
 			internalServerError(w)
 			log.Error().Err(err).Msg("error signing jwt")
