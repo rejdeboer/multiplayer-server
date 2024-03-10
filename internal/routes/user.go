@@ -96,7 +96,33 @@ func validateUserCreate(userCreate UserCreate) error {
 		return errors.New("invalid email address")
 	}
 
+	err = validateUsername(userCreate.Username)
+	if err != nil {
+		return err
+	}
+
 	return validatePassword(userCreate.Password)
+}
+
+func validateUsername(username string) error {
+	if len(username) < 3 {
+		return fmt.Errorf("username length must be at least 3 characters")
+	}
+
+	hasSpecial := false
+
+	for _, char := range username {
+		switch {
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+
+	if hasSpecial {
+		return fmt.Errorf("username can not contain any special characters")
+	}
+
+	return nil
 }
 
 func validatePassword(password string) error {

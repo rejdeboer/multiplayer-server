@@ -56,6 +56,18 @@ func TestCreateUser(t *testing.T) {
 		{
 			outputStatusCode: 400,
 			outputBody: routes.ErrorResponse{
+				Message: "username can not contain any special characters",
+				Status:  400,
+			},
+			input: routes.UserCreate{
+				Email:    "rick.deboer@live.nl",
+				Username: "rejdeboer$",
+				Password: "Very$ecret1",
+			},
+		},
+		{
+			outputStatusCode: 400,
+			outputBody: routes.ErrorResponse{
 				Message: "password must contain at least one digit",
 				Status:  400,
 			},
