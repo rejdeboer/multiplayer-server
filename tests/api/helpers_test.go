@@ -32,8 +32,16 @@ var dbpool *pgxpool.Pool
 
 type TestApp struct {
 	handler  http.Handler
-	user     routes.UserCreate
+	user     TestUser
+	token    string
 	settings configuration.ApplicationSettings
+}
+
+type TestUser struct {
+	ID       string
+	Email    string
+	Username string
+	Password string
 }
 
 func GetTestApp() TestApp {
@@ -45,10 +53,19 @@ func GetTestApp() TestApp {
 		handler = middleware.WithDb(handler, dbpool)
 
 		user := createTestUser()
+		token, err := routes.GetJwt(
+			settings.Application.SigningKey,
+			user.ID,
+			user.Username,
+		)
+		if err != nil {
+			log.Fatalf("error creating test token: %s", err)
+		}
 
 		testApp = TestApp{
 			handler:  handler,
 			user:     user,
+			token:    token,
 			settings: settings.Application,
 		}
 	})
@@ -149,7 +166,7 @@ func startMigration(databaseUrl string) {
 	migrate.Up()
 }
 
-func createTestUser() routes.UserCreate {
+func createTestUser() TestUser {
 	q := db.New(dbpool)
 
 	password := gofakeit.Password(true, true, true, true, false, 8)
@@ -170,7 +187,13 @@ func createTestUser() routes.UserCreate {
 		log.Fatalf("error storing test user in db: %s", err)
 	}
 
-	return routes.UserCreate{
+	userId, err := user.ID.Value()
+	if err != nil {
+		log.Fatalf("error converting user id to string: %s", err)
+	}
+
+	return TestUser{
+		ID:       userId.(string),
 		Email:    user.Email,
 		Username: user.Username,
 		Password: password,

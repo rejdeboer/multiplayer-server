@@ -53,7 +53,7 @@ func getToken(signingKey string) http.HandlerFunc {
 
 		userId, _ := user.ID.Value()
 
-		token, err := getJwt(signingKey, userId.(string), user.Username)
+		token, err := GetJwt(signingKey, userId.(string), user.Username)
 		if err != nil {
 			httperrors.InternalServerError(w)
 			log.Error().Err(err).Msg("error signing jwt")
@@ -75,12 +75,7 @@ func getToken(signingKey string) http.HandlerFunc {
 	}
 }
 
-func checkPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
-
-func getJwt(signingKey string, userId string, username string) (string, error) {
+func GetJwt(signingKey string, userId string, username string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
@@ -94,4 +89,9 @@ func getJwt(signingKey string, userId string, username string) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }

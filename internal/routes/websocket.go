@@ -29,7 +29,11 @@ func handleWebSocket(
 		}
 		defer conn.Close()
 
-		client := &websocket.Client{Hub: hub, Conn: conn, Send: make(chan []byte, 256)}
+		client := &websocket.Client{
+			Hub:  hub,
+			Conn: conn,
+			Send: make(chan []byte, 256),
+		}
 		client.Hub.Register <- client
 
 		go client.WritePump()

@@ -1,13 +1,9 @@
 package websocket
 
 type Hub struct {
-	Clients   map[*Client]bool
-	Broadcast chan []byte
-
-	// Register requests from the clients.
-	Register chan *Client
-
-	// Unregister requests from clients.
+	Clients    map[*Client]bool
+	Broadcast  chan []byte
+	Register   chan *Client
 	Unregister chan *Client
 }
 
