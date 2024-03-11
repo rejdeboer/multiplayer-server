@@ -9,16 +9,16 @@ import (
 )
 
 const (
-	// Time allowed to write a message to the peer.
+	// Time allowed to write a message to the peer
 	writeWait = 1 * time.Second
 
-	// Time allowed to read the next pong message from the peer.
+	// Time allowed to read the next pong message from the peer
 	pongWait = 60 * time.Second
 
-	// Send pings to peer with this period. Must be less than pongWait.
+	// Send pings to peer with this period. Must be less than pongWait
 	pingPeriod = (pongWait * 9) / 10
 
-	// Maximum message size allowed from peer.
+	// Maximum message size allowed from peer
 	maxMessageSize = 512
 )
 
@@ -65,7 +65,7 @@ func (c *Client) WritePump() {
 		case message, ok := <-c.Send:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				// The hub closed the channel.
+				// The hub closed the channel
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -76,7 +76,7 @@ func (c *Client) WritePump() {
 			}
 			w.Write(message)
 
-			// Add queued chat messages to the current websocket message.
+			// Add queued chat messages to the current websocket message
 			n := len(c.Send)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
