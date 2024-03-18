@@ -13,8 +13,14 @@ jobs:
       with:
         go-version: '1.22.1'
 
-    - name: Build
-      run: go build -v ./...
-
     - name: Test
       run: go test -v ./tests/...
+
+    - name: Build container image
+      run: docker build -t emailapi.azurecr.io/repo:email-api .
+
+    - name: Azure login
+      run: az login
+
+    - name: Push image to ACR
+      run: docker push emailapi.azurecr.io/repo:email-api
