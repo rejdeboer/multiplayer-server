@@ -50,9 +50,8 @@ jobs:
       - name: Check out config repo
         uses: actions/checkout@v3
         with:
-          repository: 'rejdeboer/multiplayer-server-deployment'
+          repository: 'rejdeboer/multiplayer-deployment'
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: master
 
       - name: Modify application image
         run: |
