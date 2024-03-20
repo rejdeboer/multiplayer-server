@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: 'rejdeboer/multiplayer-deployment'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Modify application image
         run: |
@@ -60,6 +60,4 @@ jobs:
           sed -i "s+rejdeboer.azurecr.io/repo:multiplayer-server.*+rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.sha }}+g" kubernetes/multiplayer-server-deployment.yml
           git add .
           git commit -m 'automated: update multiplayer-server image'
-          git push https://rejdeboer:${GH_TOKEN}@github.com/rejdeboer/multiplayer-deployment.git master
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          git push origin master
