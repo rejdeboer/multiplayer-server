@@ -8,6 +8,9 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
 
+permissions:
+      id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
