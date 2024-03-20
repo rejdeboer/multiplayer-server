@@ -32,7 +32,11 @@ jobs:
         run: docker build -t rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.run_number }} .
 
       - name: Azure login
-        run: az login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets. ARM_SUBSCRIPTION_ID }}
 
       - name: Push image to ACR
         run: docker push rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.run_number }}
