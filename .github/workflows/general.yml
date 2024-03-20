@@ -31,9 +31,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build container image
-        run: docker build -t rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.run_number }} .
-
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -41,8 +38,10 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets. ARM_SUBSCRIPTION_ID }}
 
-      - name: Push image to ACR
-        run: docker push rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.run_number }}
+      - name: Build and push image
+        id: build-image
+        run: |
+         az acr build --image rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.sha }} --registry rejdeboer.azurecr.io --file "Dockerfile" .
 
   modify-manifest:
     needs: docker
@@ -58,10 +57,9 @@ jobs:
         run: |
           git config user.email rick.deboer@live.nl
           git config user.name rejdeboer
-          sed -i "s+rejdeboer.azurecr.io/repo:multiplayer-server.*+rejdeboer.azurecr.io/repo:multiplayer-server-$RUN_NUMBER+g" kubernetes/multiplayer-server-deployment.yml
+          sed -i "s+rejdeboer.azurecr.io/repo:multiplayer-server.*+rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.sha }}+g" kubernetes/multiplayer-server-deployment.yml
           git add .
-          git commit -m 'automated: update application image'
+          git commit -m 'automated: update multiplayer-server image'
           git push https://rejdeboer:${GH_TOKEN}@github.com/rejdeboer/multiplayer-deployment.git master
         env:
-          RUN_NUMBER: ${{ github.run_number }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
