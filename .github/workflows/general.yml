@@ -62,4 +62,4 @@ jobs:
           git commit -m 'automated: update multiplayer-server image'
           git push https://rejdeboer:${GH_TOKEN}@github.com/rejdeboer/multiplayer-deployment.git master
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
