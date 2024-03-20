@@ -41,7 +41,7 @@ jobs:
       - name: Build and push image
         id: build-image
         run: |
-         az acr build --image rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.sha }} --registry rejdeboer --file "Dockerfile" .
+         az acr build --image rejdeboer.azurecr.io/multiplayer-server:${{ github.sha }} --registry rejdeboer --file "Dockerfile" .
 
   modify-manifest:
     needs: docker
@@ -57,7 +57,7 @@ jobs:
         run: |
           git config user.email rick.deboer@live.nl
           git config user.name rejdeboer
-          sed -i "s+rejdeboer.azurecr.io/repo:multiplayer-server.*+rejdeboer.azurecr.io/repo:multiplayer-server-${{ github.sha }}+g" kubernetes/multiplayer-server-deployment.yml
+          sed -i "s+rejdeboer.azurecr.io/multiplayer-server:.*+rejdeboer.azurecr.io/multiplayer-server:${{ github.sha }}+g" kubernetes/multiplayer-server-deployment.yml
           git add .
           git commit -m 'automated: update multiplayer-server image'
           git push origin master
