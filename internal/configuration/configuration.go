@@ -25,7 +25,7 @@ type DatabaseSettings struct {
 
 type ApplicationSettings struct {
 	Port       uint16 `yaml:"port"`
-	SigningKey string `yaml:"siging_key"`
+	SigningKey string `yaml:"siging_key" envconfig:"JWT_SECRET_KEY"`
 }
 
 func ReadConfiguration(path string) Settings {
