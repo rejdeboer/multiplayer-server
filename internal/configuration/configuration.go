@@ -17,14 +17,14 @@ type Settings struct {
 type DatabaseSettings struct {
 	Username   string `yaml:"username" envconfig:"DB_USERNAME"`
 	Password   string `yaml:"password" envconfig:"DB_PASSWORD"`
-	Host       string `yaml:"host"`
-	Port       uint16 `yaml:"port"`
-	DbName     string `yaml:"db_name"`
+	Host       string `yaml:"host" envconfig:"DB_HOST"`
+	Port       uint16 `yaml:"port" envconfig:"DB_PORT"`
+	DbName     string `yaml:"db_name" envconfig:"DB_NAME"`
 	RequireSsl bool   `yaml:"require_ssl"`
 }
 
 type ApplicationSettings struct {
-	Port       uint16 `yaml:"port"`
+	Port       uint16 `yaml:"port" envconfig:"PORT"`
 	SigningKey string `yaml:"siging_key" envconfig:"JWT_SECRET_KEY"`
 }
 
