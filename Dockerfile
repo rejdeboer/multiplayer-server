@@ -14,6 +14,7 @@ FROM gcr.io/distroless/base-debian11 AS build-release-stage
 
 COPY --from=build-stage /app/tmp/main /app/tmp/main
 COPY --from=build-stage /app/configuration /app/configuration
+COPY --from=build-stage /app/db/migrations /app/db/migrations
 
 EXPOSE 8000
 

@@ -57,7 +57,8 @@ jobs:
         run: |
           git config user.email rick.deboer@live.nl
           git config user.name rejdeboer
-          sed -i "s+rejdeboer.azurecr.io/multiplayer-server:.*+rejdeboer.azurecr.io/multiplayer-server:${{ github.sha }}+g" kubernetes/multiplayer-server-deployment.yml
+          sed -i "s+rejdeboer.azurecr.io/multiplayer-server:.*+rejdeboer.azurecr.io/multiplayer-server:${{ github.sha }}+g" deploy/multiplayer-server-deployment.yml
+          sed -i "s+rejdeboer.azurecr.io/multiplayer-server:.*+rejdeboer.azurecr.io/multiplayer-server:${{ github.sha }}+g" pre-deploy/migration.job.yml
           git add .
           git commit -m 'automated: update multiplayer-server image'
           git push origin master
