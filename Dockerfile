@@ -17,7 +17,7 @@ COPY --from=build-stage /app/db/migrations /app/db/migrations
 
 EXPOSE 8000
 
-USER nonroot:nonroot
+USER root
 
 WORKDIR /app
 
