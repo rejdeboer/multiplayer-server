@@ -1,2 +1,2 @@
 database:
-  require_ssl: false
+  require_ssl: true
