@@ -35,8 +35,9 @@ func handleWebSocket(
 			Send: make(chan []byte, 256),
 		}
 		client.Hub.Register <- client
+		log.Info().Msg("new client registered")
 
 		go client.WritePump()
-		go client.ReadPump()
+		client.ReadPump()
 	}
 }
