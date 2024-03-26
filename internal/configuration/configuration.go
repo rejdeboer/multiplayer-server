@@ -15,12 +15,13 @@ type Settings struct {
 }
 
 type DatabaseSettings struct {
-	Username   string `yaml:"username" envconfig:"DB_USERNAME"`
-	Password   string `yaml:"password" envconfig:"DB_PASSWORD"`
-	Host       string `yaml:"host" envconfig:"DB_HOST"`
-	Port       uint16 `yaml:"port" envconfig:"DB_PORT"`
-	DbName     string `yaml:"db_name" envconfig:"DB_NAME"`
-	RequireSsl bool   `yaml:"require_ssl"`
+	Username        string `yaml:"username" envconfig:"DB_USERNAME"`
+	Password        string `yaml:"password" envconfig:"DB_PASSWORD"`
+	Host            string `yaml:"host" envconfig:"DB_HOST"`
+	Port            uint16 `yaml:"port" envconfig:"DB_PORT"`
+	DbName          string `yaml:"db_name" envconfig:"DB_NAME"`
+	RequireSsl      bool   `yaml:"require_ssl"`
+	CertificatePath string `yaml:"certificate_path" envconfig:"DB_CERTIFICATE_PATH"`
 }
 
 type ApplicationSettings struct {

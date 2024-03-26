@@ -53,6 +53,8 @@ func getDbConnectionPool(settings configuration.DatabaseSettings) *pgxpool.Pool 
 
 	if !settings.RequireSsl {
 		dbUrl = dbUrl + "?sslmode=disable"
+	} else {
+		dbUrl = dbUrl + "?sslmode=verify-full&sslrootcert=" + settings.CertificatePath
 	}
 
 	pool, err := pgxpool.New(context.Background(), dbUrl)
