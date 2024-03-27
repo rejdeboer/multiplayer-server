@@ -9,8 +9,7 @@ services:
     command: |
       apk --no-cache add postgresql-client
       go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-      export DATABASE_URL="postgres://postgres:password@localhost:5432/multiplayer?sslmode=disable"
-      migrate -database "${DATABASE_URL}" -path=db/migrations up
+      migrate -database "postgres://postgres:password@localhost:5432/multiplayer?sslmode=disable" -path=db/migrations up
       /go/bin/air
   postgres:
     image: postgres:16-alpine
@@ -22,3 +21,12 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=postgres
       - POSTGRES_DB=multiplayer
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: "azurite"
+    hostname: azurite
+    restart: always
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
