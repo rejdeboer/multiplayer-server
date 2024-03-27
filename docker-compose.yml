@@ -1,0 +1,24 @@
+version: '3'
+services:
+  app:
+    depends_on: ["postgres"]
+    image: cosmtrek/air
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: |
+      apk --no-cache add postgresql-client
+      go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+      export DATABASE_URL="postgres://postgres:password@localhost:5432/multiplayer?sslmode=disable"
+      migrate -database "${DATABASE_URL}" -path=db/migrations up
+      /go/bin/air
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - ~/apps/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=multiplayer
