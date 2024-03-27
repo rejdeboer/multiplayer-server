@@ -12,6 +12,7 @@ import (
 type Settings struct {
 	Database    DatabaseSettings    `yaml:"database"`
 	Application ApplicationSettings `yaml:"application"`
+	Azure       AzureSettings       `yaml:"azure"`
 }
 
 type DatabaseSettings struct {
@@ -27,6 +28,11 @@ type DatabaseSettings struct {
 type ApplicationSettings struct {
 	Port       uint16 `yaml:"port" envconfig:"PORT"`
 	SigningKey string `yaml:"siging_key" envconfig:"JWT_SECRET_KEY"`
+}
+
+type AzureSettings struct {
+	StorageAccountName string `yaml:"storage_account_name" envconfig:"AZ_STORAGE_ACCOUNT_NAME"`
+	StorageAccountKey  string `yaml:"storage_account_key" envconfig:"AZ_STORAGE_ACCOUNT_KEY"`
 }
 
 func ReadConfiguration(path string) Settings {

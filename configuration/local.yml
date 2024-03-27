@@ -2,3 +2,6 @@ database:
   require_ssl: false
 application:
   signing_key: secret
+azure:
+  storage_account_name: devstoreaccount1
+  storage_account_key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
