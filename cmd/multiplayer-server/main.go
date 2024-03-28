@@ -23,7 +23,7 @@ func main() {
 	pool := getDbConnectionPool(settings.Database)
 	defer pool.Close()
 
-	handler := createHandler(settings.Application, pool)
+	handler := createHandler(settings, pool)
 
 	log.Info().Msg(fmt.Sprintf("Server listening on port %d", port))
 
@@ -34,10 +34,11 @@ func main() {
 	}
 }
 
-func createHandler(settings configuration.ApplicationSettings, pool *pgxpool.Pool) http.Handler {
-	handler := routes.NewRouter(settings)
+func createHandler(settings configuration.Settings, pool *pgxpool.Pool) http.Handler {
+	handler := routes.NewRouter(settings.Application)
 	handler = middleware.WithLogging(handler)
 	handler = middleware.WithDb(handler, pool)
+	handler = middleware.WithBlobStorage(handler, settings.Azure)
 
 	return handler
 }
