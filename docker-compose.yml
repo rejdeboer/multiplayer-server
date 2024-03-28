@@ -36,3 +36,6 @@ services:
       - "10000:10000"
       - "10001:10001"
       - "10002:10002"
+    volumes:
+      - ./resources/:/opt/azurite/resources
+    entrypoint: azurite --cert ./resources/az-dev-cert.pem --key ./resources/az-dev-key.pem
