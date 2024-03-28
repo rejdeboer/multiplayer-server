@@ -8,6 +8,7 @@ import (
 	"net/mail"
 	"unicode"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
@@ -69,6 +70,14 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userId, _ := createdUser.ID.Value()
+
+	blob_client := ctx.Value("azblob").(*azblob.Client)
+	_, err = blob_client.CreateContainer(ctx, userId.(string), nil)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Str("user_id", userId.(string)).Msg("failed to create blob container")
+		return
+	}
 
 	response, err := json.Marshal(UserResponse{
 		ID:       userId.(string),
