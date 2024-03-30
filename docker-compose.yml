@@ -11,6 +11,8 @@ services:
       - 8000:8000
     entrypoint: bash -c "
         apt-get update
+        && cp ./resources/az-dev-cert.pem /etc/ssl/certs
+        && chmod 644 /etc/ssl/certs/az-dev-cert.pem && update-ca-certificates
         && apt-get install -y postgresql-client
         && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
         && migrate -database "postgres://postgres:password@postgres:5432/multiplayer?sslmode=disable" -path=db/migrations up
@@ -38,4 +40,4 @@ services:
       - "10002:10002"
     volumes:
       - ./resources/:/opt/azurite/resources
-    entrypoint: azurite --cert ./resources/az-dev-cert.pem --key ./resources/az-dev-key.pem
+    entrypoint: azurite --blobHost 0.0.0.0 --cert ./resources/az-dev-cert.pem --key ./resources/az-dev-key.pem --oauth basic

@@ -43,14 +43,20 @@ func WithBlobStorage(next http.Handler, settings configuration.AzureSettings) ht
 	l := logger.Get()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		credential, err := azidentity.NewDefaultAzureCredential(nil)
-		if err != nil {
-			l.Error().Err(err).Msg("error getting azure blob storage credentials")
-			panic(err)
+		var client *azblob.Client
+		var err error
+		if settings.BlobConnectionString != "" {
+			// Local
+			client, err = azblob.NewClientFromConnectionString(settings.BlobConnectionString, nil)
+		} else {
+			// Production
+			credential, err := azidentity.NewDefaultAzureCredential(nil)
+			if err != nil {
+				l.Error().Err(err).Msg("error getting azure blob storage credentials")
+				panic(err)
+			}
+			client, err = azblob.NewClient(settings.BlobStorageEndpoint, credential, nil)
 		}
-
-		url := settings.BlobStorageEndpoint + settings.StorageAccountName
-		client, err := azblob.NewClient(url, credential, nil)
 		if err != nil {
 			l.Error().Err(err).Msg("error creating azure blob storage client")
 			panic(err)

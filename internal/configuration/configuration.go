@@ -31,9 +31,13 @@ type ApplicationSettings struct {
 }
 
 type AzureSettings struct {
-	StorageAccountName  string `yaml:"storage_account_name" envconfig:"AZ_STORAGE_ACCOUNT_NAME"`
-	StorageAccountKey   string `yaml:"storage_account_key" envconfig:"AZ_STORAGE_ACCOUNT_KEY"`
-	BlobStorageEndpoint string `yaml:"blob_storage_endpoint" envconfig:"AZ_BLOB_STORAGE_ENDPOINT"`
+	StorageAccountName   string `yaml:"storage_account_name" envconfig:"AZ_STORAGE_ACCOUNT_NAME"`
+	StorageAccountKey    string `yaml:"storage_account_key" envconfig:"AZ_STORAGE_ACCOUNT_KEY"`
+	BlobStorageEndpoint  string `yaml:"blob_storage_endpoint" envconfig:"AZ_BLOB_STORAGE_ENDPOINT"`
+	TenantID             string `yaml:"tenant_id" envconfig:"AZ_TENANT_ID"`
+	ClientID             string `yaml:"client_id" envconfig:"AZ_CLIENT_ID"`
+	ClientSecret         string `yaml:"client_secrtet" envconfig:"AZ_CLIENT_SECRET"`
+	BlobConnectionString string `yaml:"blob_connection_string"`
 }
 
 func ReadConfiguration(path string) Settings {
