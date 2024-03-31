@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -29,6 +31,7 @@ import (
 var once sync.Once
 var testApp TestApp
 var dbpool *pgxpool.Pool
+var blobHostAndPort string
 
 type TestApp struct {
 	handler  http.Handler
@@ -47,10 +50,13 @@ type TestUser struct {
 func GetTestApp() TestApp {
 	once.Do(func() {
 		settings := configuration.ReadConfiguration("../../configuration")
+		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "https", "http")
+		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "azurite:10000", blobHostAndPort)
 
 		handler := routes.NewRouter(settings.Application)
 		handler = middleware.WithLogging(handler)
 		handler = middleware.WithDb(handler, dbpool)
+		handler = middleware.WithBlobStorage(handler, settings.Azure)
 
 		user := createTestUser()
 		token, err := routes.GetJwt(
@@ -77,8 +83,8 @@ func TestMain(m *testing.M) {
 	dockerPool := initDocker()
 
 	postgresContainer := createPostgresContainer(dockerPool)
-	hostAndPort := postgresContainer.GetHostPort("5432/tcp")
-	databaseUrl := fmt.Sprintf("postgres://postgres:postgres@%s/multiplayer?sslmode=disable", hostAndPort)
+	databaseHostAndPort := postgresContainer.GetHostPort("5432/tcp")
+	databaseUrl := fmt.Sprintf("postgres://postgres:postgres@%s/multiplayer?sslmode=disable", databaseHostAndPort)
 
 	if err := dockerPool.Retry(waitPostgresContainerToBeReady(databaseUrl)); err != nil {
 		log.Fatalf("postgres container not intialized: %s", err)
@@ -86,10 +92,20 @@ func TestMain(m *testing.M) {
 
 	startMigration(databaseUrl)
 
+	azuriteContainer := createAzuriteContainer(dockerPool)
+	blobHostAndPort = azuriteContainer.GetHostPort("10000/tcp")
+	if err := dockerPool.Retry(waitAzuriteContainerToBeReady(blobHostAndPort)); err != nil {
+		log.Fatalf("azurite container not intialized: %s", err)
+	}
+
 	code := m.Run()
 
 	if err := dockerPool.Purge(postgresContainer); err != nil {
 		log.Fatalf("could not purge postgres: %s", err)
+	}
+
+	if err := dockerPool.Purge(azuriteContainer); err != nil {
+		log.Fatalf("could not purge azurite: %s", err)
 	}
 
 	os.Exit(code)
@@ -132,6 +148,25 @@ func createPostgresContainer(dockerPool *dockertest.Pool) *dockertest.Resource {
 	return container
 }
 
+func createAzuriteContainer(dockerPool *dockertest.Pool) *dockertest.Resource {
+	container, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "mcr.microsoft.com/azure-storage/azurite",
+		Tag:        "latest",
+		Env: []string{
+			"listen_addresses = '*'",
+		},
+	}, func(config *docker.HostConfig) {
+		config.AutoRemove = true
+		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
+	})
+	if err != nil {
+		log.Fatalf("could not start postgres: %s", err)
+	}
+
+	container.Expire(120)
+	return container
+}
+
 func waitPostgresContainerToBeReady(url string) func() error {
 	return func() error {
 		ctx := context.Background()
@@ -142,6 +177,13 @@ func waitPostgresContainerToBeReady(url string) func() error {
 		}
 
 		return dbpool.Ping(ctx)
+	}
+}
+
+func waitAzuriteContainerToBeReady(address string) func() error {
+	return func() error {
+		_, err := net.Dial("tcp", address)
+		return err
 	}
 }
 
