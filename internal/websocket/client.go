@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"bytes"
-	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -35,6 +34,7 @@ type Client struct {
 }
 
 func (c *Client) ReadPump() {
+	log := c.Context.Log
 	defer func() {
 		c.Hub.Unregister <- c
 		c.Conn.Close()
@@ -46,7 +46,7 @@ func (c *Client) ReadPump() {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				log.Error().Err(err).Msg("unexpected close error")
 			}
 			break
 		}
