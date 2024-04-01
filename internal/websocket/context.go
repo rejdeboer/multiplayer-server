@@ -5,6 +5,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
+	"github.com/rs/xid"
 	"github.com/rs/zerolog"
 )
 
@@ -18,6 +19,7 @@ func CreateContext(ctx context.Context) Context {
 	userID := ctx.Value("user_id").(string)
 	log := logger.Get().With().
 		Str("user_id", userID).
+		Str("cid", xid.New().String()).
 		Logger()
 
 	return Context{
