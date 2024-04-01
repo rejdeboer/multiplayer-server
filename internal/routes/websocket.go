@@ -30,9 +30,10 @@ func handleWebSocket(
 		defer conn.Close()
 
 		client := &websocket.Client{
-			Hub:  hub,
-			Conn: conn,
-			Send: make(chan []byte, 256),
+			Context: websocket.CreateContext(ctx),
+			Hub:     hub,
+			Conn:    conn,
+			Send:    make(chan []byte, 256),
 		}
 		client.Hub.Register <- client
 		log.Info().Msg("new client registered")

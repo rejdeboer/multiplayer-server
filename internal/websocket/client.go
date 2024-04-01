@@ -28,9 +28,10 @@ var (
 )
 
 type Client struct {
-	Hub  *Hub
-	Conn *websocket.Conn
-	Send chan []byte
+	Context Context
+	Hub     *Hub
+	Conn    *websocket.Conn
+	Send    chan []byte
 }
 
 func (c *Client) ReadPump() {

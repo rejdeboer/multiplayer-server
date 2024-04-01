@@ -11,7 +11,7 @@ type Context struct {
 	BlobClient *azblob.Client
 }
 
-func FromCtx(ctx context.Context) Context {
+func CreateContext(ctx context.Context) Context {
 	return Context{
 		UserID:     ctx.Value("user_id").(string),
 		BlobClient: ctx.Value("azblob").(*azblob.Client),
