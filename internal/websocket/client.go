@@ -65,7 +65,7 @@ func (c *Client) WritePump() {
 				return
 			}
 
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
+			w, err := c.Conn.NextWriter(websocket.BinaryMessage)
 			if err != nil {
 				return
 			}
