@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -19,11 +18,6 @@ const (
 
 	// Maximum message size allowed from peer
 	maxMessageSize = 512
-)
-
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
 )
 
 type Client struct {
@@ -50,7 +44,7 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		log.Info().Str("content", string(message)).Str("message", "TEST").Msg("received message")
 		c.Hub.Broadcast <- message
 	}
 }
@@ -80,7 +74,6 @@ func (c *Client) WritePump() {
 			// Add queued chat messages to the current websocket message
 			n := len(c.Send)
 			for i := 0; i < n; i++ {
-				w.Write(newline)
 				w.Write(<-c.Send)
 			}
 
