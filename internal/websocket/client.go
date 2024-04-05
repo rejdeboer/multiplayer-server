@@ -44,7 +44,7 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		log.Info().Str("content", string(message)).Str("message", "TEST").Msg("received message")
+		log.Info().Bytes("content", message).Msg("received message")
 		c.Hub.Broadcast <- message
 	}
 }
