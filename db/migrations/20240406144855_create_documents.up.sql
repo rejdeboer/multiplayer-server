@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE documents (
     id uuid PRIMARY KEY DEFAULT UUID_GENERATE_V4(),
     owner_id uuid DEFAULT UUID_GENERATE_V4(),
     content bytea,
