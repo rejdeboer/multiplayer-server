@@ -10,6 +10,7 @@ import (
 
 type Document struct {
 	ID      pgtype.UUID
+	Name    string
 	OwnerID pgtype.UUID
 	Content []byte
 }

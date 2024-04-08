@@ -12,7 +12,7 @@ import (
 )
 
 const getDocumentsByOwnerID = `-- name: GetDocumentsByOwnerID :many
-SELECT id, owner_id, content FROM documents WHERE owner_id = $1
+SELECT id, name, owner_id, content FROM documents WHERE owner_id = $1
 `
 
 func (q *Queries) GetDocumentsByOwnerID(ctx context.Context, ownerID pgtype.UUID) ([]Document, error) {
@@ -24,7 +24,12 @@ func (q *Queries) GetDocumentsByOwnerID(ctx context.Context, ownerID pgtype.UUID
 	var items []Document
 	for rows.Next() {
 		var i Document
-		if err := rows.Scan(&i.ID, &i.OwnerID, &i.Content); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.OwnerID,
+			&i.Content,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
