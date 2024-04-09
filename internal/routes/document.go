@@ -22,6 +22,11 @@ type DocumentResponse struct {
 	SharedWith []string `json:"shared_with"`
 }
 
+type DocumentListItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
@@ -72,6 +77,45 @@ var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+})
+
+var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := zerolog.Ctx(ctx)
+
+	pool := ctx.Value("pool").(*pgxpool.Pool)
+	q := db.New(pool)
+
+	var uuid pgtype.UUID
+	userID := ctx.Value("user_id").(string)
+	err := uuid.Scan(userID)
+
+	dbDocuments, err := q.GetDocumentsByOwnerID(ctx, uuid)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("failed to fetch documents from db")
+		return
+	}
+
+	var documents []DocumentListItem
+	for _, document := range dbDocuments {
+		documentId, _ := document.ID.Value()
+		documents = append(documents, DocumentListItem{
+			ID:   documentId.(string),
+			Name: document.Name,
+		})
+	}
+
+	response, err := json.Marshal(documents)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error marshalling response")
+		return
+	}
+
+	log.Info().Int("items", len(documents)).Msg("send document list")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 })
