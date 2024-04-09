@@ -22,7 +22,7 @@ func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 	})
 
 	mux.HandleFunc("POST /user", createUser)
-	mux.HandleFunc("POST /document", createDocument)
+	mux.HandleFunc("POST /document", middleware.WithAuth(createDocument, settings.SigningKey))
 	mux.HandleFunc("POST /token", getToken(settings.SigningKey))
 	mux.HandleFunc("GET /websocket", middleware.WithAuth(handleWebSocket(hub), settings.SigningKey))
 

@@ -7,16 +7,23 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createDocument = `-- name: CreateDocument :one
-INSERT INTO documents (name)
-    VALUES ($1)
+INSERT INTO documents (name, owner_id)
+    VALUES ($1, $2)
 RETURNING id, name, owner_id, content
 `
 
-func (q *Queries) CreateDocument(ctx context.Context, name string) (Document, error) {
-	row := q.db.QueryRow(ctx, createDocument, name)
+type CreateDocumentParams struct {
+	Name    string
+	OwnerID pgtype.UUID
+}
+
+func (q *Queries) CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error) {
+	row := q.db.QueryRow(ctx, createDocument, arg.Name, arg.OwnerID)
 	var i Document
 	err := row.Scan(
 		&i.ID,

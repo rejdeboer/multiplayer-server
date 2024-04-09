@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
@@ -17,10 +18,11 @@ type DocumentCreate struct {
 type DocumentResponse struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
+	OwnerID    string   `json:"owner_id"`
 	SharedWith []string `json:"shared_with"`
 }
 
-func createDocument(w http.ResponseWriter, r *http.Request) {
+var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
@@ -33,10 +35,21 @@ func createDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pool := ctx.Value("pool").(*pgxpool.Pool)
-
 	q := db.New(pool)
 
-	createdDocument, err := q.CreateDocument(ctx, document.Name)
+	var uuid pgtype.UUID
+	userID := ctx.Value("user_id").(string)
+	err = uuid.Scan(userID)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("failed to parse pg uuid")
+		return
+	}
+
+	createdDocument, err := q.CreateDocument(ctx, db.CreateDocumentParams{
+		Name:    document.Name,
+		OwnerID: uuid,
+	})
 	if err != nil {
 		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("failed to push document to db")
@@ -45,9 +58,12 @@ func createDocument(w http.ResponseWriter, r *http.Request) {
 	documentId, _ := createdDocument.ID.Value()
 	log.Info().Any("document_id", documentId).Msg("created new document")
 
+	ownerID, _ := createdDocument.OwnerID.Value()
+
 	response, err := json.Marshal(DocumentResponse{
 		ID:         documentId.(string),
 		Name:       createdDocument.Name,
+		OwnerID:    ownerID.(string),
 		SharedWith: []string{},
 	})
 	if err != nil {
@@ -58,4 +74,4 @@ func createDocument(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
-}
+})
