@@ -17,6 +17,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
@@ -36,6 +37,7 @@ var blobHostAndPort string
 type TestApp struct {
 	handler  http.Handler
 	user     TestUser
+	document db.Document
 	token    string
 	settings configuration.ApplicationSettings
 }
@@ -71,6 +73,7 @@ func GetTestApp() TestApp {
 		testApp = TestApp{
 			handler:  handler,
 			user:     user,
+			document: createTestDocument(user.ID),
 			token:    token,
 			settings: settings.Application,
 		}
@@ -240,4 +243,26 @@ func createTestUser() TestUser {
 		Username: user.Username,
 		Password: password,
 	}
+}
+
+func createTestDocument(ownerID string) db.Document {
+	q := db.New(dbpool)
+
+	name := gofakeit.Name()
+
+	var uuid pgtype.UUID
+	err := uuid.Scan(ownerID)
+	if err != nil {
+		log.Fatalf("error parsing uuid: %s", err)
+	}
+
+	document, err := q.CreateDocument(context.Background(), db.CreateDocumentParams{
+		OwnerID: uuid,
+		Name:    name,
+	})
+	if err != nil {
+		log.Fatalf("error storing test document in db: %s", err)
+	}
+
+	return document
 }
