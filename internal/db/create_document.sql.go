@@ -14,7 +14,7 @@ import (
 const createDocument = `-- name: CreateDocument :one
 INSERT INTO documents (name, owner_id)
     VALUES ($1, $2)
-RETURNING id, name, owner_id, content
+RETURNING id, name, owner_id, shared_with, content
 `
 
 type CreateDocumentParams struct {
@@ -29,6 +29,7 @@ func (q *Queries) CreateDocument(ctx context.Context, arg CreateDocumentParams) 
 		&i.ID,
 		&i.Name,
 		&i.OwnerID,
+		&i.SharedWith,
 		&i.Content,
 	)
 	return i, err

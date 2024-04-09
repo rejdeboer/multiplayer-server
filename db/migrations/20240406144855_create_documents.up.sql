@@ -2,6 +2,7 @@ CREATE TABLE documents (
     id uuid PRIMARY KEY DEFAULT UUID_GENERATE_V4(),
     name text NOT NULL,
     owner_id uuid DEFAULT UUID_GENERATE_V4() NOT NULL,
+    shared_with uuid[] DEFAULT ARRAY[]::uuid[],
     content bytea,
     CONSTRAINT fk_user
           FOREIGN KEY(owner_id) 

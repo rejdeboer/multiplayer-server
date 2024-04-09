@@ -9,10 +9,11 @@ import (
 )
 
 type Document struct {
-	ID      pgtype.UUID
-	Name    string
-	OwnerID pgtype.UUID
-	Content []byte
+	ID         pgtype.UUID
+	Name       string
+	OwnerID    pgtype.UUID
+	SharedWith []pgtype.UUID
+	Content    []byte
 }
 
 type User struct {

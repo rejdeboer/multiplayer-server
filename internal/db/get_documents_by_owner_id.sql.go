@@ -12,7 +12,7 @@ import (
 )
 
 const getDocumentsByOwnerID = `-- name: GetDocumentsByOwnerID :many
-SELECT id, name, owner_id, content FROM documents WHERE owner_id = $1
+SELECT id, name, owner_id, shared_with, content FROM documents WHERE owner_id = $1
 `
 
 func (q *Queries) GetDocumentsByOwnerID(ctx context.Context, ownerID pgtype.UUID) ([]Document, error) {
@@ -28,6 +28,7 @@ func (q *Queries) GetDocumentsByOwnerID(ctx context.Context, ownerID pgtype.UUID
 			&i.ID,
 			&i.Name,
 			&i.OwnerID,
+			&i.SharedWith,
 			&i.Content,
 		); err != nil {
 			return nil, err

@@ -16,11 +16,11 @@ type DocumentCreate struct {
 }
 
 type DocumentResponse struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	OwnerID    string   `json:"owner_id"`
-	SharedWith []string `json:"shared_with"`
-	Content    []byte   `json:"content"`
+	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	OwnerID    string        `json:"owner_id"`
+	SharedWith []pgtype.UUID `json:"shared_with"`
+	Content    []byte        `json:"content"`
 }
 
 type DocumentListItem struct {
@@ -70,7 +70,7 @@ var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		ID:         documentId.(string),
 		Name:       createdDocument.Name,
 		OwnerID:    ownerID.(string),
-		SharedWith: []string{},
+		SharedWith: createdDocument.SharedWith,
 	})
 	if err != nil {
 		httperrors.InternalServerError(w)
@@ -166,7 +166,7 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		ID:         docID,
 		OwnerID:    userID,
 		Name:       document.Name,
-		SharedWith: []string{},
+		SharedWith: document.SharedWith,
 		Content:    document.Content,
 	})
 	if err != nil {
