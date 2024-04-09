@@ -85,3 +85,49 @@ func TestListDocuments(t *testing.T) {
 		t.Errorf("test document %v not present in response: %v", testDocID, response)
 	}
 }
+
+func TestGetDocument(t *testing.T) {
+	testApp := GetTestApp()
+	testDocID := testApp.document.ID
+
+	t.Run("success response", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/document/"+testDocID, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Add("Authorization", "Bearer "+testApp.token)
+
+		rr := httptest.NewRecorder()
+		testApp.handler.ServeHTTP(rr, req)
+
+		status := rr.Result().StatusCode
+		if status != 200 {
+			t.Errorf("expected %d got %d", 200, rr.Result().StatusCode)
+		}
+
+		var response routes.DocumentResponse
+		err = json.NewDecoder(rr.Body).Decode(&response)
+		if err != nil {
+			t.Errorf("error decoding json response: %v", err)
+		}
+
+		if testDocID != response.ID {
+			t.Errorf("documents do not match; expected: %v; was: %v", testApp.document, response)
+		}
+	})
+
+	t.Run("unauthorized", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/document/"+testDocID, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+		testApp.handler.ServeHTTP(rr, req)
+
+		status := rr.Result().StatusCode
+		if status != 401 {
+			t.Errorf("expected %d got %d", 401, rr.Result().StatusCode)
+		}
+	})
+}

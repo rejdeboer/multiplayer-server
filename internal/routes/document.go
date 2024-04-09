@@ -20,6 +20,7 @@ type DocumentResponse struct {
 	Name       string   `json:"name"`
 	OwnerID    string   `json:"owner_id"`
 	SharedWith []string `json:"shared_with"`
+	Content    []byte   `json:"content"`
 }
 
 type DocumentListItem struct {
@@ -91,6 +92,11 @@ var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 	var uuid pgtype.UUID
 	userID := ctx.Value("user_id").(string)
 	err := uuid.Scan(userID)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("failed to parse pg uuid")
+		return
+	}
 
 	dbDocuments, err := q.GetDocumentsByOwnerID(ctx, uuid)
 	if err != nil {
@@ -116,6 +122,60 @@ var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 	}
 
 	log.Info().Int("items", len(documents)).Msg("sending document list")
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+})
+
+var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := zerolog.Ctx(ctx)
+
+	docID := r.PathValue("id")
+	userID := ctx.Value("user_id").(string)
+
+	pool := ctx.Value("pool").(*pgxpool.Pool)
+	q := db.New(pool)
+
+	var docUUID pgtype.UUID
+	err := docUUID.Scan(docID)
+	if err != nil {
+		httperrors.Write(w, "invalid document id, please use uuid format", http.StatusBadRequest)
+		log.Error().Err(err).Msg("user used invalid document id format")
+		return
+	}
+
+	var userUUID pgtype.UUID
+	err = userUUID.Scan(userID)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("failed to parse pg uuid")
+		return
+	}
+
+	document, err := q.GetDocumentByID(ctx, db.GetDocumentByIDParams{
+		ID:      docUUID,
+		OwnerID: userUUID,
+	})
+	if err != nil {
+		httperrors.Write(w, "document not found", http.StatusNotFound)
+		log.Error().Err(err).Str("document_id", docID).Msg("document not found")
+		return
+	}
+
+	response, err := json.Marshal(DocumentResponse{
+		ID:         docID,
+		OwnerID:    userID,
+		Name:       document.Name,
+		SharedWith: []string{},
+		Content:    document.Content,
+	})
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error marshalling response")
+		return
+	}
+
+	log.Info().Str("document_id", docID).Msg("sending document")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 })
