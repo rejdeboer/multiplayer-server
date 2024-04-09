@@ -17,7 +17,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/pgtype"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
@@ -37,7 +37,7 @@ var blobHostAndPort string
 type TestApp struct {
 	handler  http.Handler
 	user     TestUser
-	document db.Document
+	document routes.DocumentResponse
 	token    string
 	settings configuration.ApplicationSettings
 }
@@ -232,20 +232,20 @@ func createTestUser() TestUser {
 		log.Fatalf("error storing test user in db: %s", err)
 	}
 
-	userId, err := user.ID.Value()
+	userID, err := user.ID.Value()
 	if err != nil {
 		log.Fatalf("error converting user id to string: %s", err)
 	}
 
 	return TestUser{
-		ID:       userId.(string),
+		ID:       userID.(string),
 		Email:    user.Email,
 		Username: user.Username,
 		Password: password,
 	}
 }
 
-func createTestDocument(ownerID string) db.Document {
+func createTestDocument(ownerID string) routes.DocumentResponse {
 	q := db.New(dbpool)
 
 	name := gofakeit.Name()
@@ -264,5 +264,13 @@ func createTestDocument(ownerID string) db.Document {
 		log.Fatalf("error storing test document in db: %s", err)
 	}
 
-	return document
+	docID, err := document.ID.Value()
+	if err != nil {
+		log.Fatalf("error converting document id to string: %s", err)
+	}
+
+	return routes.DocumentResponse{
+		ID:   docID.(string),
+		Name: document.Name,
+	}
 }
