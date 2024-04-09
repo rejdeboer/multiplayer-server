@@ -37,7 +37,11 @@ func WithAuth(next http.Handler, signingKey string) http.HandlerFunc {
 			return
 		}
 
-		ctx = context.WithValue(ctx, "user_id", claims["user_id"])
+		userID := claims["user_id"].(string)
+		ctx = context.WithValue(ctx, "user_id", userID)
+		*log = log.With().
+			Str("user_id", userID).
+			Logger()
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
