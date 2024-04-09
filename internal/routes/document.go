@@ -115,7 +115,7 @@ var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	log.Info().Int("items", len(documents)).Msg("send document list")
+	log.Info().Int("items", len(documents)).Msg("sending document list")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 })
