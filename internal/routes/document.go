@@ -16,11 +16,11 @@ type DocumentCreate struct {
 }
 
 type DocumentResponse struct {
-	ID         uuid.UUID   `json:"id"`
-	Name       string      `json:"name"`
-	OwnerID    uuid.UUID   `json:"owner_id"`
-	SharedWith []uuid.UUID `json:"shared_with"`
-	Content    []byte      `json:"content"`
+	ID          uuid.UUID   `json:"id"`
+	Name        string      `json:"name"`
+	OwnerID     uuid.UUID   `json:"owner_id"`
+	SharedWith  []uuid.UUID `json:"shared_with"`
+	StateVector []byte      `json:"state_vector"`
 }
 
 type DocumentListItem struct {
@@ -150,11 +150,11 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 
 	response, err := json.Marshal(DocumentResponse{
-		ID:         docID,
-		OwnerID:    userID,
-		Name:       document.Name,
-		SharedWith: document.SharedWith,
-		Content:    document.Content,
+		ID:          docID,
+		OwnerID:     userID,
+		Name:        document.Name,
+		SharedWith:  document.SharedWith,
+		StateVector: document.StateVector,
 	})
 	if err != nil {
 		httperrors.InternalServerError(w)
