@@ -12,7 +12,7 @@ import (
 )
 
 const getDocumentByID = `-- name: GetDocumentByID :one
-SELECT id, name, owner_id, shared_with, content FROM documents WHERE id = $1 AND owner_ID = $2
+SELECT id, name, owner_id, shared_with, state_vector FROM documents WHERE id = $1 AND owner_ID = $2
 `
 
 type GetDocumentByIDParams struct {
@@ -28,7 +28,7 @@ func (q *Queries) GetDocumentByID(ctx context.Context, arg GetDocumentByIDParams
 		&i.Name,
 		&i.OwnerID,
 		&i.SharedWith,
-		&i.Content,
+		&i.StateVector,
 	)
 	return i, err
 }

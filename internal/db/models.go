@@ -9,11 +9,17 @@ import (
 )
 
 type Document struct {
-	ID         uuid.UUID
-	Name       string
-	OwnerID    uuid.UUID
-	SharedWith []uuid.UUID
-	Content    []byte
+	ID          uuid.UUID
+	Name        string
+	OwnerID     uuid.UUID
+	SharedWith  []uuid.UUID
+	StateVector []byte
+}
+
+type DocumentUpdate struct {
+	DocumentID uuid.UUID
+	Clock      int32
+	Value      []byte
 }
 
 type User struct {
