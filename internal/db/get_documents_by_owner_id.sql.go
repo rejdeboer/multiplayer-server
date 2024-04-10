@@ -8,14 +8,14 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const getDocumentsByOwnerID = `-- name: GetDocumentsByOwnerID :many
 SELECT id, name, owner_id, shared_with, content FROM documents WHERE owner_id = $1
 `
 
-func (q *Queries) GetDocumentsByOwnerID(ctx context.Context, ownerID pgtype.UUID) ([]Document, error) {
+func (q *Queries) GetDocumentsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]Document, error) {
 	rows, err := q.db.Query(ctx, getDocumentsByOwnerID, ownerID)
 	if err != nil {
 		return nil, err

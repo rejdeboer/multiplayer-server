@@ -8,7 +8,7 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createDocument = `-- name: CreateDocument :one
@@ -19,7 +19,7 @@ RETURNING id, name, owner_id, shared_with, content
 
 type CreateDocumentParams struct {
 	Name    string
-	OwnerID pgtype.UUID
+	OwnerID uuid.UUID
 }
 
 func (q *Queries) CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error) {

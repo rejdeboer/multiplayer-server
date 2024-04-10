@@ -8,7 +8,7 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const getDocumentByID = `-- name: GetDocumentByID :one
@@ -16,8 +16,8 @@ SELECT id, name, owner_id, shared_with, content FROM documents WHERE id = $1 AND
 `
 
 type GetDocumentByIDParams struct {
-	ID      pgtype.UUID
-	OwnerID pgtype.UUID
+	ID      uuid.UUID
+	OwnerID uuid.UUID
 }
 
 func (q *Queries) GetDocumentByID(ctx context.Context, arg GetDocumentByIDParams) (Document, error) {

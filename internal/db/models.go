@@ -5,19 +5,19 @@
 package db
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 type Document struct {
-	ID         pgtype.UUID
+	ID         uuid.UUID
 	Name       string
-	OwnerID    pgtype.UUID
-	SharedWith []pgtype.UUID
+	OwnerID    uuid.UUID
+	SharedWith []uuid.UUID
 	Content    []byte
 }
 
 type User struct {
-	ID       pgtype.UUID
+	ID       uuid.UUID
 	Email    string
 	Username string
 	Passhash string

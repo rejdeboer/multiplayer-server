@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
@@ -23,9 +24,9 @@ type UserCreate struct {
 }
 
 type UserResponse struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	Username string `json:"username"`
+	ID       uuid.UUID `json:"id"`
+	Email    string    `json:"email"`
+	Username string    `json:"username"`
 }
 
 func createUser(w http.ResponseWriter, r *http.Request) {
@@ -68,20 +69,20 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("failed to push user to db")
 		return
 	}
-	userId, _ := createdUser.ID.Value()
-	log.Info().Any("user_id", userId).Msg("created new user")
+	userID := createdUser.ID.String()
+	log.Info().Str("user_id", userID).Msg("created new user")
 
 	blob_client := ctx.Value("azblob").(*azblob.Client)
-	_, err = blob_client.CreateContainer(ctx, userId.(string), nil)
+	_, err = blob_client.CreateContainer(ctx, userID, nil)
 	if err != nil {
 		httperrors.InternalServerError(w)
-		log.Error().Err(err).Str("user_id", userId.(string)).Msg("failed to create blob container")
+		log.Error().Err(err).Str("user_id", userID).Msg("failed to create blob container")
 		return
 	}
 	log.Info().Msg("created new blob container")
 
 	response, err := json.Marshal(UserResponse{
-		ID:       userId.(string),
+		ID:       createdUser.ID,
 		Email:    user.Email,
 		Username: user.Username,
 	})

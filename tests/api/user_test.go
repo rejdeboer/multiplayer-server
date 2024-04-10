@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 )
@@ -22,7 +23,7 @@ func TestCreateUser(t *testing.T) {
 			name:             "success response",
 			outputStatusCode: 200,
 			outputBody: routes.UserResponse{
-				ID:       "",
+				ID:       uuid.New(),
 				Email:    "rick.deboer@live.nl",
 				Username: "rejdeboer",
 			},
@@ -139,7 +140,7 @@ func TestCreateUser(t *testing.T) {
 				t.Errorf("error decoding json response: %v", err)
 			}
 
-			response.ID = ""
+			response.ID = testCase.outputBody.(routes.UserResponse).ID
 			if response != testCase.outputBody {
 				t.Errorf("output body mismatch; expected %v; got %v", testCase.outputBody, response)
 			}

@@ -91,7 +91,7 @@ func TestGetDocument(t *testing.T) {
 	testDocID := testApp.document.ID
 
 	t.Run("success response", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, "/document/"+testDocID, nil)
+		req, err := http.NewRequest(http.MethodGet, "/document/"+testDocID.String(), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -117,7 +117,7 @@ func TestGetDocument(t *testing.T) {
 	})
 
 	t.Run("unauthorized", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, "/document/"+testDocID, nil)
+		req, err := http.NewRequest(http.MethodGet, "/document/"+testDocID.String(), nil)
 		if err != nil {
 			t.Fatal(err)
 		}

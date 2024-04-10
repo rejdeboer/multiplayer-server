@@ -51,9 +51,7 @@ func getToken(signingKey string) http.HandlerFunc {
 			return
 		}
 
-		userId, _ := user.ID.Value()
-
-		token, err := GetJwt(signingKey, userId.(string), user.Username)
+		token, err := GetJwt(signingKey, user.ID.String(), user.Username)
 		if err != nil {
 			httperrors.InternalServerError(w)
 			log.Error().Err(err).Msg("error signing jwt")
@@ -69,7 +67,7 @@ func getToken(signingKey string) http.HandlerFunc {
 			return
 		}
 
-		log.Info().Any("user_id", userId).Msg("successful authentication")
+		log.Info().Str("user_id", user.ID.String()).Msg("successful authentication")
 		w.WriteHeader(http.StatusOK)
 		w.Write(response)
 	}

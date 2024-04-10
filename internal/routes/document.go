@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
@@ -16,16 +16,16 @@ type DocumentCreate struct {
 }
 
 type DocumentResponse struct {
-	ID         string        `json:"id"`
-	Name       string        `json:"name"`
-	OwnerID    string        `json:"owner_id"`
-	SharedWith []pgtype.UUID `json:"shared_with"`
-	Content    []byte        `json:"content"`
+	ID         uuid.UUID   `json:"id"`
+	Name       string      `json:"name"`
+	OwnerID    uuid.UUID   `json:"owner_id"`
+	SharedWith []uuid.UUID `json:"shared_with"`
+	Content    []byte      `json:"content"`
 }
 
 type DocumentListItem struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,33 +43,28 @@ var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	pool := ctx.Value("pool").(*pgxpool.Pool)
 	q := db.New(pool)
 
-	var uuid pgtype.UUID
-	userID := ctx.Value("user_id").(string)
-	err = uuid.Scan(userID)
+	userID, err := uuid.Parse(ctx.Value("user_id").(string))
 	if err != nil {
 		httperrors.InternalServerError(w)
-		log.Error().Err(err).Msg("failed to parse pg uuid")
+		log.Error().Err(err).Msg("failed to parse uuid")
 		return
 	}
 
 	createdDocument, err := q.CreateDocument(ctx, db.CreateDocumentParams{
 		Name:    document.Name,
-		OwnerID: uuid,
+		OwnerID: userID,
 	})
 	if err != nil {
 		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("failed to push document to db")
 		return
 	}
-	documentId, _ := createdDocument.ID.Value()
-	log.Info().Any("document_id", documentId).Msg("created new document")
-
-	ownerID, _ := createdDocument.OwnerID.Value()
+	log.Info().Str("document_id", createdDocument.ID.String()).Msg("created new document")
 
 	response, err := json.Marshal(DocumentResponse{
-		ID:         documentId.(string),
+		ID:         createdDocument.ID,
 		Name:       createdDocument.Name,
-		OwnerID:    ownerID.(string),
+		OwnerID:    createdDocument.OwnerID,
 		SharedWith: createdDocument.SharedWith,
 	})
 	if err != nil {
@@ -89,16 +84,14 @@ var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 	pool := ctx.Value("pool").(*pgxpool.Pool)
 	q := db.New(pool)
 
-	var uuid pgtype.UUID
-	userID := ctx.Value("user_id").(string)
-	err := uuid.Scan(userID)
+	userID, err := uuid.Parse(ctx.Value("user_id").(string))
 	if err != nil {
 		httperrors.InternalServerError(w)
-		log.Error().Err(err).Msg("failed to parse pg uuid")
+		log.Error().Err(err).Msg("failed to parse uuid")
 		return
 	}
 
-	dbDocuments, err := q.GetDocumentsByOwnerID(ctx, uuid)
+	dbDocuments, err := q.GetDocumentsByOwnerID(ctx, userID)
 	if err != nil {
 		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("failed to fetch documents from db")
@@ -107,9 +100,8 @@ var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 
 	var documents []DocumentListItem
 	for _, document := range dbDocuments {
-		documentId, _ := document.ID.Value()
 		documents = append(documents, DocumentListItem{
-			ID:   documentId.(string),
+			ID:   document.ID,
 			Name: document.Name,
 		})
 	}
@@ -130,35 +122,30 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
-	docID := r.PathValue("id")
-	userID := ctx.Value("user_id").(string)
-
 	pool := ctx.Value("pool").(*pgxpool.Pool)
 	q := db.New(pool)
 
-	var docUUID pgtype.UUID
-	err := docUUID.Scan(docID)
+	docID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		httperrors.Write(w, "invalid document id, please use uuid format", http.StatusBadRequest)
 		log.Error().Err(err).Msg("user used invalid document id format")
 		return
 	}
 
-	var userUUID pgtype.UUID
-	err = userUUID.Scan(userID)
+	userID, err := uuid.Parse(ctx.Value("user_id").(string))
 	if err != nil {
 		httperrors.InternalServerError(w)
-		log.Error().Err(err).Msg("failed to parse pg uuid")
+		log.Error().Err(err).Msg("failed to parse uuid")
 		return
 	}
 
 	document, err := q.GetDocumentByID(ctx, db.GetDocumentByIDParams{
-		ID:      docUUID,
-		OwnerID: userUUID,
+		ID:      docID,
+		OwnerID: userID,
 	})
 	if err != nil {
 		httperrors.Write(w, "document not found", http.StatusNotFound)
-		log.Error().Err(err).Str("document_id", docID).Msg("document not found")
+		log.Error().Err(err).Str("document_id", docID.String()).Msg("document not found")
 		return
 	}
 
@@ -175,7 +162,7 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	log.Info().Str("document_id", docID).Msg("sending document")
+	log.Info().Str("document_id", docID.String()).Msg("sending document")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 })

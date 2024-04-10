@@ -17,7 +17,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
@@ -43,7 +43,7 @@ type TestApp struct {
 }
 
 type TestUser struct {
-	ID       string
+	ID       uuid.UUID
 	Email    string
 	Username string
 	Password string
@@ -63,7 +63,7 @@ func GetTestApp() TestApp {
 		user := createTestUser()
 		token, err := routes.GetJwt(
 			settings.Application.SigningKey,
-			user.ID,
+			user.ID.String(),
 			user.Username,
 		)
 		if err != nil {
@@ -232,45 +232,29 @@ func createTestUser() TestUser {
 		log.Fatalf("error storing test user in db: %s", err)
 	}
 
-	userID, err := user.ID.Value()
-	if err != nil {
-		log.Fatalf("error converting user id to string: %s", err)
-	}
-
 	return TestUser{
-		ID:       userID.(string),
+		ID:       user.ID,
 		Email:    user.Email,
 		Username: user.Username,
 		Password: password,
 	}
 }
 
-func createTestDocument(ownerID string) routes.DocumentResponse {
+func createTestDocument(ownerID uuid.UUID) routes.DocumentResponse {
 	q := db.New(dbpool)
 
 	name := gofakeit.Name()
 
-	var uuid pgtype.UUID
-	err := uuid.Scan(ownerID)
-	if err != nil {
-		log.Fatalf("error parsing uuid: %s", err)
-	}
-
 	document, err := q.CreateDocument(context.Background(), db.CreateDocumentParams{
-		OwnerID: uuid,
+		OwnerID: ownerID,
 		Name:    name,
 	})
 	if err != nil {
 		log.Fatalf("error storing test document in db: %s", err)
 	}
 
-	docID, err := document.ID.Value()
-	if err != nil {
-		log.Fatalf("error converting document id to string: %s", err)
-	}
-
 	return routes.DocumentResponse{
-		ID:   docID.(string),
+		ID:   document.ID,
 		Name: document.Name,
 	}
 }
