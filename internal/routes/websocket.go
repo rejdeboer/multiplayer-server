@@ -52,6 +52,7 @@ func handleSync(
 
 		client := &websocket.Client{
 			Context: websocket.CreateContext(ctx, docID),
+			// TODO: Create session struct that manages clients connected to the same document
 			Doc: sync.Doc{
 				ID:          docID,
 				StateVector: document.StateVector,
