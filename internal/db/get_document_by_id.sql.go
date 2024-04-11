@@ -12,16 +12,11 @@ import (
 )
 
 const getDocumentByID = `-- name: GetDocumentByID :one
-SELECT id, name, owner_id, shared_with, state_vector FROM documents WHERE id = $1 AND owner_ID = $2
+SELECT id, name, owner_id, shared_with, state_vector FROM documents WHERE id = $1
 `
 
-type GetDocumentByIDParams struct {
-	ID      uuid.UUID
-	OwnerID uuid.UUID
-}
-
-func (q *Queries) GetDocumentByID(ctx context.Context, arg GetDocumentByIDParams) (Document, error) {
-	row := q.db.QueryRow(ctx, getDocumentByID, arg.ID, arg.OwnerID)
+func (q *Queries) GetDocumentByID(ctx context.Context, id uuid.UUID) (Document, error) {
+	row := q.db.QueryRow(ctx, getDocumentByID, id)
 	var i Document
 	err := row.Scan(
 		&i.ID,

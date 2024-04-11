@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -139,13 +140,16 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	document, err := q.GetDocumentByID(ctx, db.GetDocumentByIDParams{
-		ID:      docID,
-		OwnerID: userID,
-	})
+	document, err := q.GetDocumentByID(ctx, docID)
 	if err != nil {
 		httperrors.Write(w, "document not found", http.StatusNotFound)
 		log.Error().Err(err).Str("document_id", docID.String()).Msg("document not found")
+		return
+	}
+
+	if document.OwnerID != userID && !slices.Contains(document.SharedWith, userID) {
+		httperrors.Write(w, "document not found", http.StatusNotFound)
+		log.Error().Err(err).Str("document_id", docID.String()).Msg("user has no access rights")
 		return
 	}
 

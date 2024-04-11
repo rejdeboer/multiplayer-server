@@ -28,7 +28,7 @@ func (q *Queries) CreateDocumentUpdate(ctx context.Context, arg CreateDocumentUp
 }
 
 const getDocumentClock = `-- name: GetDocumentClock :one
-SELECT COALESCE(MAX(clock), 0)
+SELECT COALESCE(MAX(clock), 0) 
 FROM document_updates
 WHERE document_id = $1
 `
