@@ -19,6 +19,10 @@ const (
 
 	// Maximum message size allowed from peer
 	maxMessageSize = 512
+
+	// Note: Message types
+	UPDATE     uint8 = 0
+	QUERY_DIFF uint8 = 1
 )
 
 type Client struct {
@@ -46,8 +50,18 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		log.Info().Bytes("content", message).Msg("received message")
-		c.Hub.Broadcast <- message
+
+		messageType, message := message[0], message[1:]
+		switch messageType {
+		case UPDATE:
+			go c.Doc.StoreUpdate(c.Context.Pool, message)
+			c.Hub.Broadcast <- message
+		case QUERY_DIFF:
+			// TODO: Compute diff
+			c.Send <- c.Doc.StateVector
+		default:
+			log.Error().Uint8("message_type", uint8(messageType)).Msg("unknown message type for reader")
+		}
 	}
 }
 
