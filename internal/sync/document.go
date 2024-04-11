@@ -1,4 +1,4 @@
-package document
+package sync
 
 import (
 	"github.com/google/uuid"
