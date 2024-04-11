@@ -5,9 +5,6 @@ import (
 	"io"
 )
 
-// NOTE: Y-CRDT v1 encoding format:
-// 1. `clients_len` - max 4 bytes
-
 type Decoder struct {
 	buf  []byte
 	next int
@@ -20,6 +17,12 @@ func From(buf []byte) Decoder {
 	}
 }
 
+// NOTE: Y-CRDT update v1 encoding format:
+// 1. `clientsLen` | max 4 bytes
+// 2. For each client:
+//   - `blocksLen` | max 4 bytes
+//   - `client` | max 4 bytes
+//   - `clock` | max 4 bytes
 func (d *Decoder) DecodeUpdate() {
 	clientsLen, _ := d.readU32()
 	clients := make(map[uint32]string, clientsLen)
