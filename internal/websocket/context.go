@@ -3,7 +3,6 @@ package websocket
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
 	"github.com/rs/xid"
@@ -11,10 +10,9 @@ import (
 )
 
 type Context struct {
-	Log        zerolog.Logger
-	UserID     string
-	Pool       *pgxpool.Pool
-	BlobClient *azblob.Client
+	Log    zerolog.Logger
+	UserID string
+	Pool   *pgxpool.Pool
 }
 
 func CreateContext(ctx context.Context) Context {
@@ -25,9 +23,8 @@ func CreateContext(ctx context.Context) Context {
 		Logger()
 
 	return Context{
-		Log:        log,
-		UserID:     userID,
-		Pool:       ctx.Value("pool").(*pgxpool.Pool),
-		BlobClient: ctx.Value("azblob").(*azblob.Client),
+		Log:    log,
+		UserID: userID,
+		Pool:   ctx.Value("pool").(*pgxpool.Pool),
 	}
 }
