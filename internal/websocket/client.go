@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/rejdeboer/multiplayer-server/internal/sync"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 
 type Client struct {
 	Context Context
+	Doc     sync.Doc
 	Hub     *Hub
 	Conn    *websocket.Conn
 	Send    chan []byte
