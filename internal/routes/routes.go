@@ -11,9 +11,7 @@ import (
 
 func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 	mux := http.NewServeMux()
-
 	hub := websocket.NewHub()
-	go hub.Run()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		l := zerolog.Ctx(r.Context())

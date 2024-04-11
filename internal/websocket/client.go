@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/rejdeboer/multiplayer-server/internal/sync"
 )
 
 const (
@@ -27,8 +26,7 @@ const (
 
 type Client struct {
 	Context Context
-	Doc     sync.Doc
-	Hub     *Hub
+	Room    *Room
 	Conn    *websocket.Conn
 	Send    chan []byte
 }
@@ -36,7 +34,7 @@ type Client struct {
 func (c *Client) ReadPump() {
 	log := c.Context.Log
 	defer func() {
-		c.Hub.Unregister <- c
+		c.Room.Unregister <- c
 		c.Conn.Close()
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
@@ -54,11 +52,11 @@ func (c *Client) ReadPump() {
 		messageType, message := message[0], message[1:]
 		switch messageType {
 		case UPDATE:
-			go c.Doc.StoreUpdate(c.Context.Pool, message)
-			c.Hub.Broadcast <- message
+			go c.Room.Doc.StoreUpdate(c.Context.Pool, message)
+			c.Room.Broadcast <- message
 		case QUERY_DIFF:
 			// TODO: Compute diff
-			c.Send <- c.Doc.StateVector
+			c.Send <- c.Room.Doc.StateVector
 		default:
 			log.Error().Uint8("message_type", uint8(messageType)).Msg("unknown message type for reader")
 		}

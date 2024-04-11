@@ -50,18 +50,19 @@ func handleSync(
 		}
 		defer conn.Close()
 
+		doc := sync.Doc{
+			ID:          docID,
+			StateVector: document.StateVector,
+		}
+
+		room := hub.GetDocumentRoom(&doc)
 		client := &websocket.Client{
 			Context: websocket.CreateContext(ctx, docID),
-			// TODO: Create session struct that manages clients connected to the same document
-			Doc: sync.Doc{
-				ID:          docID,
-				StateVector: document.StateVector,
-			},
-			Hub:  hub,
-			Conn: conn,
-			Send: make(chan []byte, 256),
+			Room:    room,
+			Conn:    conn,
+			Send:    make(chan []byte, 256),
 		}
-		client.Hub.Register <- client
+		client.Room.Register <- client
 		log.Info().Str("document_id", docID.String()).Msg("new client registered")
 
 		go client.WritePump()
