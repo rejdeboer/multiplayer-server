@@ -20,6 +20,17 @@ func From(buf []byte) Decoder {
 	}
 }
 
+func (d *Decoder) DecodeUpdate() {
+	clientsLen, _ := d.readU32()
+	clients := make(map[uint32]string, clientsLen)
+
+	for _ = range clientsLen {
+		blocksLen, _ := d.readU32()
+		client, _ := d.readU32()
+		clock, _ := d.readU32()
+	}
+}
+
 func (d *Decoder) readU32() (uint32, error) {
 	var num uint32 = 0
 	var len uint = 0
