@@ -5,6 +5,13 @@ import (
 	"io"
 )
 
+const (
+	// Note: Error types
+	EndOfBuffer        = "EndOfBuffer"
+	UnexpectedEOF      = "UnexpectedEOF"
+	VarIntSizeExceeded = "VarIntSizeExceeded"
+)
+
 type Reader struct {
 	buf  []byte
 	next int
@@ -57,16 +64,16 @@ func (r *Reader) readU32() (uint32, error) {
 		// a proper setting for 32bit int would be 35 bits, however for Yjs compatibility
 		// we allow wrap up up to 64bit ints (with int overflow wrap)
 		if len > 70 {
-			return 0, errors.New("VarIntSizeExceeded")
+			return 0, errors.New(VarIntSizeExceeded)
 		}
 	}
 
-	return 0, errors.New("UnexpectedEOF")
+	return 0, errors.New(UnexpectedEOF)
 }
 
 func (r *Reader) readU8() (uint8, error) {
 	if r.next == len(r.buf) {
-		return 0, errors.New("EndOfBuffer")
+		return 0, errors.New(EndOfBuffer)
 	}
 	n := r.buf[r.next]
 	r.next = r.next + 1
