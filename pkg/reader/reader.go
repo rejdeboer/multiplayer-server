@@ -1,17 +1,17 @@
-package decoder
+package reader
 
 import (
 	"errors"
 	"io"
 )
 
-type Decoder struct {
+type Reader struct {
 	buf  []byte
 	next int
 }
 
-func From(buf []byte) Decoder {
-	return Decoder{
+func FromBuffer(buf []byte) Reader {
+	return Reader{
 		buf:  buf,
 		next: 0,
 	}
@@ -23,23 +23,23 @@ func From(buf []byte) Decoder {
 //   - `blocksLen` | max 4 bytes
 //   - `client` | max 4 bytes
 //   - `clock` | max 4 bytes
-func (d *Decoder) DecodeUpdate() {
-	clientsLen, _ := d.readU32()
+func (r *Reader) DecodeUpdate() {
+	clientsLen, _ := r.readU32()
 	clients := make(map[uint32]string, clientsLen)
 
 	for _ = range clientsLen {
-		blocksLen, _ := d.readU32()
-		client, _ := d.readU32()
-		clock, _ := d.readU32()
+		blocksLen, _ := r.readU32()
+		client, _ := r.readU32()
+		clock, _ := r.readU32()
 	}
 }
 
-func (d *Decoder) readU32() (uint32, error) {
+func (r *Reader) readU32() (uint32, error) {
 	var num uint32 = 0
 	var len uint = 0
 
 	for {
-		r, err := d.readU8()
+		i, err := r.readU8()
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -47,10 +47,10 @@ func (d *Decoder) readU32() (uint32, error) {
 			return 0, err
 		}
 
-		num |= uint32(r&0b01111111) << len
+		num |= uint32(i&0b01111111) << len
 		len += 7
 
-		if r < 0b10000000 {
+		if i < 0b10000000 {
 			return num, nil
 		}
 
@@ -64,11 +64,11 @@ func (d *Decoder) readU32() (uint32, error) {
 	return 0, errors.New("UnexpectedEOF")
 }
 
-func (d *Decoder) readU8() (uint8, error) {
-	if d.next == len(d.buf) {
+func (r *Reader) readU8() (uint8, error) {
+	if r.next == len(r.buf) {
 		return 0, errors.New("EndOfBuffer")
 	}
-	n := d.buf[d.next]
-	d.next = d.next + 1
+	n := r.buf[r.next]
+	r.next = r.next + 1
 	return n, nil
 }
