@@ -24,7 +24,7 @@ func (h *Hub) GetDocumentRoom(doc *sync.Doc) *Room {
 
 	if docRoom == nil {
 		docRoom = NewRoom(doc)
-		go docRoom.Run()
+		go docRoom.Run(h)
 		h.Rooms[docRoom] = true
 	}
 

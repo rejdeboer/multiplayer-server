@@ -20,7 +20,8 @@ func NewRoom(doc *sync.Doc) *Room {
 	}
 }
 
-func (r *Room) Run() {
+func (r *Room) Run(hub *Hub) {
+	defer delete(hub.Rooms, r)
 	for {
 		select {
 		case client := <-r.Register:
@@ -29,6 +30,9 @@ func (r *Room) Run() {
 			if _, ok := r.Clients[client]; ok {
 				delete(r.Clients, client)
 				close(client.Send)
+			}
+			if len(r.Clients) == 0 {
+				break
 			}
 		case message := <-r.Broadcast:
 			for client := range r.Clients {
