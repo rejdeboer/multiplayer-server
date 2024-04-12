@@ -18,3 +18,19 @@ func DecodeStateVector(buf []byte) StateVector {
 
 	return sv
 }
+
+func diffStateVectors(localSv StateVector, remoteSv StateVector) map[uint32]uint32 {
+	diff := make(map[uint32]uint32)
+	for client, remoteClock := range remoteSv {
+		localClock := localSv[client]
+		if localClock > remoteClock {
+			diff[client] = remoteClock
+		}
+	}
+	for client, _ := range localSv {
+		if remoteSv[client] == 0 {
+			diff[client] = 0
+		}
+	}
+	return diff
+}
