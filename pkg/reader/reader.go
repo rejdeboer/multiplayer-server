@@ -31,22 +31,22 @@ func FromBuffer(buf []byte) Reader {
 //   - `client` | max 4 bytes
 //   - `clock` | max 4 bytes
 func (r *Reader) DecodeUpdate() {
-	clientsLen, _ := r.readU32()
+	clientsLen, _ := r.ReadU32()
 	clients := make(map[uint32]string, clientsLen)
 
 	for _ = range clientsLen {
-		blocksLen, _ := r.readU32()
-		client, _ := r.readU32()
-		clock, _ := r.readU32()
+		blocksLen, _ := r.ReadU32()
+		client, _ := r.ReadU32()
+		clock, _ := r.ReadU32()
 	}
 }
 
-func (r *Reader) readU32() (uint32, error) {
+func (r *Reader) ReadU32() (uint32, error) {
 	var num uint32 = 0
 	var len uint = 0
 
 	for {
-		i, err := r.readU8()
+		i, err := r.ReadU8()
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -71,7 +71,7 @@ func (r *Reader) readU32() (uint32, error) {
 	return 0, errors.New(UnexpectedEOF)
 }
 
-func (r *Reader) readU8() (uint8, error) {
+func (r *Reader) ReadU8() (uint8, error) {
 	if r.next == len(r.buf) {
 		return 0, errors.New(EndOfBuffer)
 	}
