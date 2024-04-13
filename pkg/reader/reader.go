@@ -29,8 +29,9 @@ func FromBuffer(buf []byte) Reader {
 // 2. For each client:
 //   - `blocksLen` | max 4 bytes
 //   - `client` | max 4 bytes
-//   - `clock` | max 4 bytes
-func (r *Reader) DecodeUpdate() {
+//   - `clock` | max 4 bytes | starting clock for blocks
+func DecodeUpdate(buf []byte) {
+	r := FromBuffer(buf)
 	clientsLen, _ := r.ReadU32()
 	clients := make(map[uint32]string, clientsLen)
 
@@ -38,6 +39,11 @@ func (r *Reader) DecodeUpdate() {
 		blocksLen, _ := r.ReadU32()
 		client, _ := r.ReadU32()
 		clock, _ := r.ReadU32()
+
+		blocks := make([]string, blocksLen)
+		for i := range blocksLen {
+
+		}
 	}
 }
 
