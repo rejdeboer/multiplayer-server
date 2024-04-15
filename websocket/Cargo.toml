@@ -1,0 +1,10 @@
+[package]
+name = "websocket"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+config = "0.11"
+tracing = "0.1.40"
+tracing-log = "0.2.0"
+yrs = "0.18"
