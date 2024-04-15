@@ -1,8 +1,15 @@
 name: Push
 
 on:
-  pull_request:
   push:
+    paths:
+      - ".github"
+      - "pkg"
+      - "internal"
+      - "tests"
+      - "resources"
+      - "cmd"
+      - "configuration"
   workflow_dispatch:
 
 env:
