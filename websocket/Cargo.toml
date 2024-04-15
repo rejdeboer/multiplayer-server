@@ -7,10 +7,15 @@ publish = false
 
 [dependencies]
 axum = { version = "0.7", features = ["ws"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+futures = "0.3"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+headers = "0.4"
 config = "0.11"
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-log = "0.2.0"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5.0", features = ["fs", "trace"] }
 yrs = "0.18"
