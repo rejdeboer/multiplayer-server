@@ -23,9 +23,6 @@ impl Client {
     fn process_message(&self, msg: Message) -> ControlFlow<(), ()> {
         let who = &self.who;
         match msg {
-            Message::Text(t) => {
-                println!(">>> {who} sent str: {t:?}");
-            }
             Message::Binary(d) => {
                 println!(">>> {} sent {} bytes: {:?}", who, d.len(), d);
             }
@@ -42,6 +39,7 @@ impl Client {
             }
             Message::Pong(_) => (),
             Message::Ping(_) => (),
+            msg => tracing::warn!("unhandled message: {:?}", msg),
         }
         ControlFlow::Continue(())
     }
