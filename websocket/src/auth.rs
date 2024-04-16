@@ -12,9 +12,9 @@ use serde_aux::field_attributes::deserialize_number_from_string;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    exp: u64,
-    user_id: String,
-    username: String,
+    pub exp: u64,
+    pub user_id: String,
+    pub username: String,
 }
 
 #[derive(Debug, Clone)]

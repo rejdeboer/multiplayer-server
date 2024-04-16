@@ -1,6 +1,11 @@
 use once_cell::sync::Lazy;
+use rand::Rng;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::types::Uuid;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
+use tokio_tungstenite::tungstenite::handshake::client::Request;
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use websocket::auth::Claims;
 use websocket::configuration::{get_configuration, DatabaseSettings};
 use websocket::startup::{get_connection_pool, Application};
 use websocket::telemetry::{get_subscriber, init_subscriber};
@@ -19,15 +24,30 @@ pub struct TestApp {
     pub address: String,
     pub port: u16,
     pub db_pool: PgPool,
+    pub signing_key: Secret<String>,
 }
 
 impl TestApp {
-    pub async fn test_document_id(&self) -> String {
-        let row = sqlx::query!("SELECT id FROM documents LIMIT 1")
+    pub async fn test_document(&self) -> (Uuid, Uuid) {
+        let row = sqlx::query!("SELECT id, owner_id FROM documents LIMIT 1")
             .fetch_one(&self.db_pool)
             .await
             .expect("fetched document");
-        row.id.to_string()
+        (row.id, row.owner_id)
+    }
+
+    pub async fn create_owner_client(
+        &self,
+    ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
+        let test_document = self.test_document().await;
+        let owner_token = get_signed_jwt(test_document.1, &self.signing_key);
+        let request = create_connection_request(&self.address, &owner_token);
+
+        let (socket, _response) = tokio_tungstenite::connect_async(request)
+            .await
+            .expect("websocket connected");
+
+        socket
     }
 }
 
@@ -35,24 +55,25 @@ pub async fn spawn_app() -> TestApp {
     // Only initialize tracer once instead of every test
     Lazy::force(&TRACING);
 
-    let configuration = {
+    let settings = {
         let mut c = get_configuration().expect("configuration fetched");
         c.database.db_name = Uuid::new_v4().to_string();
         c.application.port = 0;
         c
     };
 
-    configure_database(&configuration.database).await;
-    let application = Application::build(configuration.clone())
+    configure_database(&settings.database).await;
+    let application = Application::build(settings.clone())
         .await
         .expect("application built");
     let application_port = application.port();
     let _ = tokio::spawn(application.run_until_stopped());
 
     let test_app = TestApp {
-        address: format!("http://localhost:{}", application_port),
+        address: format!("ws://localhost:{}", application_port),
         port: application_port,
-        db_pool: get_connection_pool(&configuration.database),
+        db_pool: get_connection_pool(&settings.database),
+        signing_key: settings.application.signing_key,
     };
 
     add_test_document(&test_app.db_pool).await;
@@ -91,4 +112,45 @@ async fn add_test_document(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("test document created");
+}
+
+fn get_signed_jwt(user_id: Uuid, signing_key: &Secret<String>) -> String {
+    let claims = Claims {
+        user_id: user_id.to_string(),
+        username: Uuid::new_v4().to_string(),
+        exp: 3600,
+    };
+
+    jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(signing_key.expose_secret().as_ref()),
+    )
+    .expect("token encoded")
+    .to_string()
+}
+
+fn create_connection_request(address: &str, token: &str) -> Request {
+    let url_str = &*format!("{}/ws", address);
+    let url = url::Url::parse(url_str).unwrap();
+    let host = url.host_str().expect("Host should be found in URL");
+
+    Request::builder()
+        .method("GET")
+        .uri(url_str)
+        .header("Host", host)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("Upgrade", "websocket")
+        .header("Connection", "upgrade")
+        .header("Sec-Websocket-Key", generate_websocket_key())
+        .header("Sec-Websocket-Version", "13")
+        .body(())
+        .unwrap()
+}
+
+fn generate_websocket_key() -> String {
+    let mut rng = rand::thread_rng();
+    let mut random_bytes = [0u8; 16];
+    rng.fill(&mut random_bytes);
+    base64::encode(random_bytes)
 }
