@@ -1,16 +1,11 @@
-use websocket::{configuration, startup::Application};
+use websocket::{configuration, startup::Application, telemetry::get_subscriber};
 
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "websocket=debug,tower_http=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    let subscriber = get_subscriber();
+    subscriber.init();
 
     let settings = configuration::get_configuration().expect("config fetched");
 
