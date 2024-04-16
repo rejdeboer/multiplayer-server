@@ -3,7 +3,7 @@ use axum::{
     middleware,
     response::IntoResponse,
     routing::get,
-    Router,
+    Extension, Router,
 };
 use axum_extra::TypedHeader;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -12,7 +12,7 @@ use tokio::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 
 use crate::{
-    auth::auth_middleware,
+    auth::{auth_middleware, User},
     client::Client,
     configuration::{DatabaseSettings, Settings},
 };
@@ -68,16 +68,17 @@ async fn ws_handler(
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(_addr): ConnectInfo<SocketAddr>,
     State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
 ) -> impl IntoResponse {
     let _user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
         user_agent.to_string()
     } else {
         String::from("Unknown client")
     };
-    ws.on_upgrade(move |socket| handle_socket(socket, pool))
+    ws.on_upgrade(move |socket| handle_socket(socket, user, pool))
 }
 
-async fn handle_socket(socket: WebSocket, pool: PgPool) {
-    let mut client = Client::new(socket, pool);
+async fn handle_socket(socket: WebSocket, user: User, pool: PgPool) {
+    let mut client = Client::new(socket, user, pool);
     client.run().await;
 }

@@ -17,7 +17,7 @@ pub struct Claims {
     username: String,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct User {
     id: String,
     username: String,
