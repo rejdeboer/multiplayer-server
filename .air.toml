@@ -4,3 +4,4 @@ run_cmd = "./tmp/main"
 
 [build]
 cmd = "go build -o ./tmp/main ./cmd/multiplayer-server/main.go"
+exclude_dir = ["websocket"]

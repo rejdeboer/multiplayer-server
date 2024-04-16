@@ -55,14 +55,14 @@ func GetTestApp() TestApp {
 		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "https", "http")
 		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "azurite:10000", blobHostAndPort)
 
-		handler := routes.NewRouter(settings.Application)
+		handler := routes.NewRouter(settings.Auth)
 		handler = middleware.WithLogging(handler)
 		handler = middleware.WithDb(handler, dbpool)
 		handler = middleware.WithBlobStorage(handler, settings.Azure)
 
 		user := createTestUser()
 		token, err := routes.GetJwt(
-			settings.Application.SigningKey,
+			settings.Auth.SigningKey,
 			user.ID.String(),
 			user.Username,
 		)

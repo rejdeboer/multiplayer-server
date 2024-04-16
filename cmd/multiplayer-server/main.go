@@ -35,7 +35,7 @@ func main() {
 }
 
 func createHandler(settings configuration.Settings, pool *pgxpool.Pool) http.Handler {
-	handler := routes.NewRouter(settings.Application)
+	handler := routes.NewRouter(settings.Auth)
 	handler = middleware.WithLogging(handler)
 	handler = middleware.WithDb(handler, pool)
 	handler = middleware.WithBlobStorage(handler, settings.Azure)

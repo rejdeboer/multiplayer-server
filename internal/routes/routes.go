@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewRouter(settings configuration.ApplicationSettings) http.Handler {
+func NewRouter(settings configuration.AuthSettings) http.Handler {
 	mux := http.NewServeMux()
 	hub := websocket.NewHub()
 

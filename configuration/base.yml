@@ -1,5 +1,7 @@
-application:
+http_server:
   port: 8000
+websocket_server:
+  port: 8001
 database:
   host: "postgres"
   port: 5432

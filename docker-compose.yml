@@ -16,7 +16,7 @@ services:
         && apt-get install -y postgresql-client
         && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
         && migrate -database "postgres://postgres:password@postgres:5432/multiplayer?sslmode=disable" -path=db/migrations up
-        && /go/bin/air
+        && /go/bin/air -c .air.toml
       "
   postgres:
     image: postgres:16-alpine

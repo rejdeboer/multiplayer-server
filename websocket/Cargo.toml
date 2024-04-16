@@ -8,10 +8,13 @@ publish = false
 [dependencies]
 axum = { version = "0.7", features = ["ws"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
+config = "0.11"
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 headers = "0.4"
-config = "0.11"
+secrecy = { version = "0.8", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde-aux = "3"
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-log = "0.2.0"

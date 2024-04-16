@@ -19,7 +19,6 @@ pub struct Application {
 impl Application {
     pub async fn build() -> Result<Self, std::io::Error> {
         let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
-        tracing::debug!("listening on {}", listener.local_addr().unwrap());
 
         let router = Router::new().route("/ws", get(ws_handler)).layer(
             TraceLayer::new_for_http()
@@ -30,6 +29,7 @@ impl Application {
     }
 
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
+        tracing::info!("listening on {}", self.listener.local_addr().unwrap());
         axum::serve(
             self.listener,
             self.router
