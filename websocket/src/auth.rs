@@ -36,25 +36,29 @@ pub async fn auth_middleware(
     let auth_header = if let Some(auth_header) = auth_header {
         auth_header
     } else {
+        tracing::error!("auth header missing");
         return Err(StatusCode::UNAUTHORIZED);
     };
 
     let mut auth_header_parts = auth_header.split(" ");
     if auth_header_parts.next() != Some("Bearer") {
+        tracing::error!("auth header bearer prefix missing");
         return Err(StatusCode::UNAUTHORIZED);
     };
 
     let token_string = if let Some(token) = auth_header_parts.next() {
         token
     } else {
+        tracing::error!("bearer token missing");
         return Err(StatusCode::UNAUTHORIZED);
     };
 
-    let token = if let Ok(token) = decode_jwt(token_string, signing_key) {
-        token
-    } else {
-        // TODO: Handle different kind of decoding errors
-        return Err(StatusCode::UNAUTHORIZED);
+    let token = match decode_jwt(token_string, signing_key) {
+        Ok(token) => token,
+        Err(err) => {
+            tracing::error!(?err, "JWT decoding error");
+            return Err(StatusCode::UNAUTHORIZED);
+        }
     };
 
     let user = User {

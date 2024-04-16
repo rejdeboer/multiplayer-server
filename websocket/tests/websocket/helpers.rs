@@ -1,3 +1,5 @@
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use once_cell::sync::Lazy;
 use rand::Rng;
 use secrecy::{ExposeSecret, Secret};
@@ -11,13 +13,8 @@ use websocket::startup::{get_connection_pool, Application};
 use websocket::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: Lazy<()> = Lazy::new(|| {
-    if std::env::var("TEST_LOG").is_ok() {
-        let subscriber = get_subscriber();
-        init_subscriber(subscriber);
-    } else {
-        let subscriber = get_subscriber();
-        init_subscriber(subscriber);
-    };
+    let subscriber = get_subscriber();
+    init_subscriber(subscriber);
 });
 
 pub struct TestApp {
@@ -28,14 +25,6 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    pub async fn test_document(&self) -> (Uuid, Uuid) {
-        let row = sqlx::query!("SELECT id, owner_id FROM documents LIMIT 1")
-            .fetch_one(&self.db_pool)
-            .await
-            .expect("fetched document");
-        (row.id, row.owner_id)
-    }
-
     pub async fn create_owner_client(
         &self,
     ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
@@ -48,6 +37,14 @@ impl TestApp {
             .expect("websocket connected");
 
         socket
+    }
+
+    async fn test_document(&self) -> (Uuid, Uuid) {
+        let row = sqlx::query!("SELECT id, owner_id FROM documents LIMIT 1")
+            .fetch_one(&self.db_pool)
+            .await
+            .expect("fetched document");
+        (row.id, row.owner_id)
     }
 }
 
@@ -76,7 +73,8 @@ pub async fn spawn_app() -> TestApp {
         signing_key: settings.application.signing_key,
     };
 
-    add_test_document(&test_app.db_pool).await;
+    let test_owner_id = add_test_user(&test_app.db_pool).await;
+    add_test_document(&test_app.db_pool, test_owner_id).await;
     test_app
 }
 
@@ -100,13 +98,13 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
     connection_pool
 }
 
-async fn add_test_document(pool: &PgPool) {
+async fn add_test_document(pool: &PgPool, owner_id: Uuid) {
     sqlx::query!(
         "INSERT INTO documents (id, name, owner_id, state_vector)
         VALUES ($1, $2, $3, $4)",
         Uuid::new_v4(),
         Uuid::new_v4().to_string(),
-        Uuid::new_v4(),
+        owner_id,
         vec![],
     )
     .execute(pool)
@@ -114,11 +112,31 @@ async fn add_test_document(pool: &PgPool) {
     .expect("test document created");
 }
 
+async fn add_test_user(pool: &PgPool) -> Uuid {
+    let row = sqlx::query!(
+        "INSERT INTO users (id, username, email, passhash)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id",
+        Uuid::new_v4(),
+        Uuid::new_v4().to_string(),
+        Uuid::new_v4().to_string(),
+        Uuid::new_v4().to_string(),
+    )
+    .fetch_one(pool)
+    .await
+    .expect("test user created");
+
+    row.id
+}
+
 fn get_signed_jwt(user_id: Uuid, signing_key: &Secret<String>) -> String {
     let claims = Claims {
         user_id: user_id.to_string(),
         username: Uuid::new_v4().to_string(),
-        exp: 3600,
+        exp: SystemTime::now()
+            .duration_since(UNIX_EPOCH - Duration::from_secs(3600))
+            .unwrap()
+            .as_secs(),
     };
 
     jsonwebtoken::encode(
