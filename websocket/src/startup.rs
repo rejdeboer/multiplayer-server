@@ -1,5 +1,6 @@
 use axum::{
     extract::{ws::WebSocket, ConnectInfo, State, WebSocketUpgrade},
+    middleware,
     response::IntoResponse,
     routing::get,
     Router,
@@ -11,6 +12,7 @@ use tokio::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 
 use crate::{
+    auth::auth_middleware,
     client::Client,
     configuration::{DatabaseSettings, Settings},
 };
@@ -32,6 +34,10 @@ impl Application {
 
         let router = Router::new()
             .route("/ws", get(ws_handler))
+            .route_layer(middleware::from_fn_with_state(
+                settings.application.signing_key,
+                auth_middleware,
+            ))
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(DefaultMakeSpan::default().include_headers(true)),
