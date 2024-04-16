@@ -1,15 +1,17 @@
 use std::{net::SocketAddr, ops::ControlFlow};
 
 use axum::extract::ws::{Message, WebSocket};
+use sqlx::PgPool;
 
 pub struct Client {
     socket: WebSocket,
     who: SocketAddr,
+    pool: PgPool,
 }
 
 impl Client {
-    pub fn new(socket: WebSocket, who: SocketAddr) -> Self {
-        Self { socket, who }
+    pub fn new(socket: WebSocket, who: SocketAddr, pool: PgPool) -> Self {
+        Self { socket, who, pool }
     }
 
     pub async fn run(&mut self) {
