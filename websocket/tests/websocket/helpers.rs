@@ -30,7 +30,7 @@ impl TestApp {
     ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
         let test_document = self.test_document().await;
         let owner_token = get_signed_jwt(test_document.1, &self.signing_key);
-        let request = create_connection_request(&self.address, &owner_token);
+        let request = create_connection_request(&self.address, &owner_token, test_document.0);
 
         let (socket, _response) = tokio_tungstenite::connect_async(request)
             .await
@@ -148,8 +148,8 @@ fn get_signed_jwt(user_id: Uuid, signing_key: &Secret<String>) -> String {
     .to_string()
 }
 
-fn create_connection_request(address: &str, token: &str) -> Request {
-    let url_str = &*format!("{}/ws", address);
+fn create_connection_request(address: &str, token: &str, document_id: Uuid) -> Request {
+    let url_str = &*format!("{}/sync/{}", address, document_id.to_string());
     let url = url::Url::parse(url_str).unwrap();
     let host = url.host_str().expect("Host should be found in URL");
 

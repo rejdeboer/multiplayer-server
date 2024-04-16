@@ -1,5 +1,6 @@
 use axum::{
-    extract::{ws::WebSocket, ConnectInfo, State, WebSocketUpgrade},
+    extract::{ws::WebSocket, ConnectInfo, Path, State, WebSocketUpgrade},
+    http::StatusCode,
     middleware,
     response::IntoResponse,
     routing::get,
@@ -10,6 +11,7 @@ use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use uuid::Uuid;
 
 use crate::{
     auth::{auth_middleware, User},
@@ -23,6 +25,7 @@ pub struct Application {
     port: u16,
 }
 
+#[derive(Clone)]
 pub struct ApplicationState {
     pool: PgPool,
 }
@@ -43,7 +46,7 @@ impl Application {
         };
 
         let router = Router::new()
-            .route("/ws", get(ws_handler))
+            .route("/sync/:document_id", get(ws_handler))
             .route_layer(middleware::from_fn_with_state(
                 settings.application.signing_key,
                 auth_middleware,
@@ -86,6 +89,7 @@ async fn ws_handler(
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(_addr): ConnectInfo<SocketAddr>,
     State(state): State<ApplicationState>,
+    Path(document_id): Path<Uuid>,
     Extension(user): Extension<User>,
 ) -> impl IntoResponse {
     let _user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
@@ -93,6 +97,19 @@ async fn ws_handler(
     } else {
         String::from("Unknown client")
     };
+
+    let document = sqlx::query!(
+        r#"
+        SELECT id, owner_id, shared_with
+        FROM documents
+        WHERE id = $1 
+        "#,
+        document_id
+    )
+    .fetch_one(&state.pool)
+    .await
+    .map_err(Err(StatusCode::NOT_FOUND))?;
+
     ws.on_upgrade(move |socket| handle_socket(socket, user, state))
 }
 
