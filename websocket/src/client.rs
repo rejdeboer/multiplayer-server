@@ -1,20 +1,21 @@
-use std::{net::SocketAddr, ops::ControlFlow};
+use std::ops::ControlFlow;
 
 use axum::extract::ws::{Message, WebSocket};
 use sqlx::PgPool;
 
+#[derive(Debug)]
 pub struct Client {
     socket: WebSocket,
-    who: SocketAddr,
     pool: PgPool,
 }
 
 impl Client {
-    pub fn new(socket: WebSocket, who: SocketAddr, pool: PgPool) -> Self {
-        Self { socket, who, pool }
+    pub fn new(socket: WebSocket, pool: PgPool) -> Self {
+        Self { socket, pool }
     }
 
     pub async fn run(&mut self) {
+        tracing::info!("new client connected");
         while let Some(Ok(msg)) = self.socket.recv().await {
             if self.process_message(msg).is_break() {
                 break;
@@ -23,25 +24,21 @@ impl Client {
     }
 
     fn process_message(&self, msg: Message) -> ControlFlow<(), ()> {
-        let who = &self.who;
         match msg {
             Message::Binary(d) => {
-                println!(">>> {} sent {} bytes: {:?}", who, d.len(), d);
+                tracing::debug!(content=?d, "received bytes");
             }
             Message::Close(c) => {
                 if let Some(cf) = c {
-                    println!(
-                        ">>> {} sent close with code {} and reason `{}`",
-                        who, cf.code, cf.reason
-                    );
+                    tracing::info!(code = %cf.code, reason = %cf.reason, "received close message");
                 } else {
-                    println!(">>> {who} somehow sent close message without CloseFrame");
+                    tracing::warn!("somehow received close message without CloseFrame");
                 }
                 return ControlFlow::Break(());
             }
             Message::Pong(_) => (),
             Message::Ping(_) => (),
-            msg => tracing::warn!("unhandled message: {:?}", msg),
+            msg => tracing::warn!(?msg, "unhandled message"),
         }
         ControlFlow::Continue(())
     }

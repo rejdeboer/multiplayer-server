@@ -3,9 +3,8 @@ database:
 application:
   base_url: "http://127.0.0.1"
   host: 127.0.0.1
+  signing_key: secret
 azure:
   blob_connection_string: DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://azurite:10000/devstoreaccount1;
   storage_account_name: devstoreaccount1
   storage_account_key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
-auth:
-  signing_key: secret
