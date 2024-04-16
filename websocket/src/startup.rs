@@ -20,6 +20,7 @@ use crate::{
 pub struct Application {
     listener: TcpListener,
     router: Router,
+    port: u16,
 }
 
 impl Application {
@@ -30,6 +31,7 @@ impl Application {
         );
 
         let listener = TcpListener::bind(address).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
         let connection_pool = get_connection_pool(&settings.database);
 
         let router = Router::new()
@@ -44,7 +46,11 @@ impl Application {
             )
             .with_state(connection_pool);
 
-        Ok(Self { listener, router })
+        Ok(Self {
+            listener,
+            router,
+            port,
+        })
     }
 
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
@@ -55,6 +61,10 @@ impl Application {
                 .into_make_service_with_connect_info::<SocketAddr>(),
         )
         .await
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
     }
 }
 
