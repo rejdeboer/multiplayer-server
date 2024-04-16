@@ -11,9 +11,8 @@ import (
 
 type Settings struct {
 	Database    DatabaseSettings    `yaml:"database"`
-	Application ApplicationSettings `yaml:"http_server"`
+	Application ApplicationSettings `yaml:"application"`
 	Azure       AzureSettings       `yaml:"azure"`
-	Auth        AuthSettings        `yaml:"auth"`
 }
 
 type DatabaseSettings struct {
@@ -27,7 +26,8 @@ type DatabaseSettings struct {
 }
 
 type ApplicationSettings struct {
-	Port uint16 `yaml:"port" envconfig:"PORT"`
+	Port       uint16 `yaml:"port" envconfig:"PORT"`
+	SigningKey string `yaml:"siging_key" envconfig:"JWT_SECRET_KEY"`
 }
 
 type AzureSettings struct {
@@ -38,10 +38,6 @@ type AzureSettings struct {
 	ClientID             string `yaml:"client_id" envconfig:"AZ_CLIENT_ID"`
 	ClientSecret         string `yaml:"client_secrtet" envconfig:"AZ_CLIENT_SECRET"`
 	BlobConnectionString string `yaml:"blob_connection_string"`
-}
-
-type AuthSettings struct {
-	SigningKey string `yaml:"signing_key" envconfig:"JWT_SECRET_KEY"`
 }
 
 func ReadConfiguration(path string) Settings {

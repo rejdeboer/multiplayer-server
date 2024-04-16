@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 
-use crate::client::Client;
+use crate::{client::Client, configuration::Settings};
 
 pub struct Application {
     listener: TcpListener,
@@ -17,7 +17,7 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build() -> Result<Self, std::io::Error> {
+    pub async fn build(settings: Settings) -> Result<Self, std::io::Error> {
         let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
 
         let router = Router::new().route("/ws", get(ws_handler)).layer(
