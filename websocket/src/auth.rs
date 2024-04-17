@@ -1,6 +1,8 @@
+use std::str::FromStr;
+
 use axum::{
     extract::{Request, State},
-    http::{header, StatusCode},
+    http::header,
     middleware::Next,
     response::Response,
 };
@@ -8,6 +10,9 @@ use jsonwebtoken::{decode, DecodingKey, TokenData, Validation};
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
+use uuid::Uuid;
+
+use crate::error::ApiError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -19,50 +24,39 @@ pub struct Claims {
 
 #[derive(Debug, Clone)]
 pub struct User {
-    id: String,
-    username: String,
+    pub id: Uuid,
+    pub username: String,
 }
 
 pub async fn auth_middleware(
     State(signing_key): State<Secret<String>>,
     mut req: Request,
     next: Next,
-) -> Result<Response, StatusCode> {
+) -> Result<Response, ApiError> {
     let auth_header = req
         .headers()
         .get(header::AUTHORIZATION)
-        .and_then(|header| header.to_str().ok());
-
-    let auth_header = if let Some(auth_header) = auth_header {
-        auth_header
-    } else {
-        tracing::error!("auth header missing");
-        return Err(StatusCode::UNAUTHORIZED);
-    };
+        .and_then(|header| header.to_str().ok())
+        .ok_or_else(|| ApiError::AuthError("auth header is missing".to_string()))?;
 
     let mut auth_header_parts = auth_header.split(" ");
     if auth_header_parts.next() != Some("Bearer") {
-        tracing::error!("auth header bearer prefix missing");
-        return Err(StatusCode::UNAUTHORIZED);
+        return Err(ApiError::AuthError(
+            "auth header bearer prefix missing".to_string(),
+        ));
     };
 
-    let token_string = if let Some(token) = auth_header_parts.next() {
-        token
-    } else {
-        tracing::error!("bearer token missing");
-        return Err(StatusCode::UNAUTHORIZED);
-    };
+    let token_string = auth_header_parts
+        .next()
+        .ok_or_else(|| ApiError::AuthError("bearer token missing".to_string()))?;
 
-    let token = match decode_jwt(token_string, signing_key) {
-        Ok(token) => token,
-        Err(err) => {
-            tracing::error!(?err, "JWT decoding error");
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-    };
+    let token = decode_jwt(token_string, signing_key).map_err(|e| {
+        tracing::error!(?e, "JWT decoding error");
+        ApiError::AuthError("invalid token".to_string())
+    })?;
 
     let user = User {
-        id: token.claims.user_id,
+        id: Uuid::from_str(&token.claims.user_id).unwrap(),
         username: token.claims.username,
     };
     req.extensions_mut().insert(user);
