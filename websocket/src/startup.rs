@@ -16,6 +16,7 @@ use crate::{
     auth::{auth_middleware, User},
     client::Client,
     configuration::{DatabaseSettings, Settings},
+    document::Document,
     error::ApiError,
 };
 
@@ -101,9 +102,10 @@ async fn ws_handler(
     let document_id = Uuid::from_str(&document_id)
         .map_err(|_| ApiError::BadRequest("please provide a valid document UUID".to_string()))?;
 
-    let document = sqlx::query!(
+    let document = sqlx::query_as!(
+        Document,
         r#"
-        SELECT id, owner_id, shared_with
+        SELECT id, owner_id, name, state_vector
         FROM documents
         WHERE id = $1 
         "#,
@@ -122,10 +124,10 @@ async fn ws_handler(
         return Err(ApiError::DocumentNotFoundError(document_id));
     }
 
-    Ok(ws.on_upgrade(move |socket| handle_socket(socket, user, state)))
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, user, document, state)))
 }
 
-async fn handle_socket(socket: WebSocket, user: User, state: ApplicationState) {
+async fn handle_socket(socket: WebSocket, user: User, document: Document, state: ApplicationState) {
     let mut client = Client::new(socket, user, state.pool);
     client.run().await;
 }
