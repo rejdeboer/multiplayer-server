@@ -7,7 +7,12 @@ use axum::{
 };
 use axum_extra::TypedHeader;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::{net::SocketAddr, str::FromStr};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 use tokio::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use uuid::Uuid;
@@ -18,6 +23,7 @@ use crate::{
     configuration::{DatabaseSettings, Settings},
     document::Document,
     error::ApiError,
+    room::Room,
 };
 
 pub struct Application {
@@ -26,9 +32,9 @@ pub struct Application {
     port: u16,
 }
 
-#[derive(Clone)]
 pub struct ApplicationState {
     pool: PgPool,
+    rooms: Mutex<HashMap<Uuid, Room>>,
 }
 
 impl Application {
@@ -42,9 +48,10 @@ impl Application {
         let port = listener.local_addr().unwrap().port();
         let connection_pool = get_connection_pool(&settings.database);
 
-        let application_state = ApplicationState {
+        let application_state = Arc::new(ApplicationState {
             pool: connection_pool,
-        };
+            rooms: Mutex::new(HashMap::new()),
+        });
 
         let router = Router::new()
             .route("/sync/:document_id", get(ws_handler))
@@ -89,7 +96,7 @@ async fn ws_handler(
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(_addr): ConnectInfo<SocketAddr>,
-    State(state): State<ApplicationState>,
+    State(state): State<Arc<ApplicationState>>,
     Path(document_id): Path<String>,
     Extension(user): Extension<User>,
 ) -> Result<Response, ApiError> {
@@ -127,7 +134,19 @@ async fn ws_handler(
     Ok(ws.on_upgrade(move |socket| handle_socket(socket, user, document, state)))
 }
 
-async fn handle_socket(socket: WebSocket, user: User, document: Document, state: ApplicationState) {
-    let mut client = Client::new(socket, user, state.pool);
+async fn handle_socket(
+    socket: WebSocket,
+    user: User,
+    document: Document,
+    state: Arc<ApplicationState>,
+) {
+    let mut room = state
+        .rooms
+        .lock()
+        .expect("received rooms lock")
+        .entry(document.id)
+        .or_insert(Room::new(state.pool.clone()));
+
+    let mut client = Client::new(socket, user);
     client.run().await;
 }

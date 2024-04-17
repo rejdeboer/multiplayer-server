@@ -1,7 +1,6 @@
 use std::ops::ControlFlow;
 
 use axum::extract::ws::{Message, WebSocket};
-use sqlx::PgPool;
 use tracing::instrument;
 
 use crate::auth::User;
@@ -10,12 +9,11 @@ use crate::auth::User;
 pub struct Client {
     socket: WebSocket,
     user: User,
-    pool: PgPool,
 }
 
 impl Client {
-    pub fn new(socket: WebSocket, user: User, pool: PgPool) -> Self {
-        Self { socket, user, pool }
+    pub fn new(socket: WebSocket, user: User) -> Self {
+        Self { socket, user }
     }
 
     #[instrument(name="websocket connection", skip(self), fields(user = ?self.user))]
