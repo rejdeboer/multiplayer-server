@@ -1,5 +1,5 @@
 use axum::{
-    extract::{ws::WebSocket, ConnectInfo, Path, State, WebSocketUpgrade},
+    extract::{ConnectInfo, Path, State, WebSocketUpgrade},
     middleware,
     response::Response,
     routing::get,
@@ -7,17 +7,22 @@ use axum::{
 };
 use axum_extra::TypedHeader;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::{net::SocketAddr, str::FromStr};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 use tokio::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use uuid::Uuid;
 
 use crate::{
     auth::{auth_middleware, User},
-    client::Client,
     configuration::{DatabaseSettings, Settings},
     document::Document,
     error::ApiError,
+    websocket::{handle_socket, room::Room},
 };
 
 pub struct Application {
@@ -26,9 +31,9 @@ pub struct Application {
     port: u16,
 }
 
-#[derive(Clone)]
 pub struct ApplicationState {
-    pool: PgPool,
+    pub pool: PgPool,
+    pub rooms: Mutex<HashMap<Uuid, Room>>,
 }
 
 impl Application {
@@ -42,9 +47,10 @@ impl Application {
         let port = listener.local_addr().unwrap().port();
         let connection_pool = get_connection_pool(&settings.database);
 
-        let application_state = ApplicationState {
+        let application_state = Arc::new(ApplicationState {
             pool: connection_pool,
-        };
+            rooms: Mutex::new(HashMap::new()),
+        });
 
         let router = Router::new()
             .route("/sync/:document_id", get(ws_handler))
@@ -89,7 +95,7 @@ async fn ws_handler(
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(_addr): ConnectInfo<SocketAddr>,
-    State(state): State<ApplicationState>,
+    State(state): State<Arc<ApplicationState>>,
     Path(document_id): Path<String>,
     Extension(user): Extension<User>,
 ) -> Result<Response, ApiError> {
@@ -125,9 +131,4 @@ async fn ws_handler(
     }
 
     Ok(ws.on_upgrade(move |socket| handle_socket(socket, user, document, state)))
-}
-
-async fn handle_socket(socket: WebSocket, user: User, document: Document, state: ApplicationState) {
-    let mut client = Client::new(socket, user, state.pool);
-    client.run().await;
 }
