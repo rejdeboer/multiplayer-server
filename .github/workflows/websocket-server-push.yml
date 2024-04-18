@@ -81,6 +81,9 @@ jobs:
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
+    defaults:
+      run:
+        working-directory: websocket
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
