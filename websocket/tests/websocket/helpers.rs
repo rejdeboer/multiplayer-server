@@ -9,7 +9,7 @@ use tokio_tungstenite::tungstenite::handshake::client::Request;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use websocket::auth::Claims;
 use websocket::configuration::{get_configuration, DatabaseSettings};
-use websocket::startup::{get_connection_pool, Application};
+use websocket::server::{get_connection_pool, Application};
 use websocket::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: Lazy<()> = Lazy::new(|| {

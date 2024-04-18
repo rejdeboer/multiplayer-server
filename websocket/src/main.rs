@@ -1,4 +1,4 @@
-use websocket::{configuration, startup::Application, telemetry::get_subscriber};
+use websocket::{configuration, server::Application, telemetry::get_subscriber};
 
 use tracing_subscriber::util::SubscriberInitExt;
 
