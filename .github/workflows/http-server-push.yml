@@ -1,15 +1,16 @@
-name: Push
+name: Http server push
 
 on:
   push:
     paths:
-      - ".github"
-      - "pkg"
-      - "internal"
-      - "tests"
-      - "resources"
-      - "cmd"
-      - "configuration"
+      - ".github/**"
+      - "pkg/**"
+      - "internal/**"
+      - "tests/**"
+      - "resources/**"
+      - "cmd/**"
+      - "configuration/**"
+      - "Dockerfile"
   workflow_dispatch:
 
 env:

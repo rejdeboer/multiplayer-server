@@ -1,10 +1,10 @@
-name: Push
+name: Websocket server push
 
 on:
   push:
     paths:
-      - ".github"
-      - "websocket"
+      - ".github/**"
+      - "websocket/**"
   workflow_dispatch:
 
 env:
