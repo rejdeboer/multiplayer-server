@@ -1,27 +1,15 @@
 mod client;
-pub mod room;
-
-use std::sync::Arc;
+pub mod syncer;
 
 use axum::extract::ws::WebSocket;
+use tokio::sync::mpsc::Sender;
 
-use crate::{auth::User, document::Document, startup::ApplicationState};
+use crate::auth::User;
 
-use self::{client::Client, room::Room};
+use self::client::Client;
 
-pub async fn handle_socket(
-    socket: WebSocket,
-    user: User,
-    document: Document,
-    state: Arc<ApplicationState>,
-) {
-    let mut room = state
-        .rooms
-        .lock()
-        .expect("received rooms lock")
-        .entry(document.id)
-        .or_insert(Room::new(state.pool.clone()));
+pub async fn handle_socket(socket: WebSocket, user: User, doc_handle: Sender<String>) {
+    let mut client = Client::new(socket, user, doc_handle);
 
-    let mut client = Client::new(socket, user);
     client.run().await;
 }

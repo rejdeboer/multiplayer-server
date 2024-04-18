@@ -1,19 +1,33 @@
 use std::ops::ControlFlow;
 
 use axum::extract::ws::{Message, WebSocket};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::instrument;
+use uuid::Uuid;
 
 use crate::auth::User;
 
 #[derive(Debug)]
 pub struct Client {
+    tx: Sender<String>,
+    id: Uuid,
+    rx: Receiver<String>,
+    doc_handle: Sender<String>,
     socket: WebSocket,
     user: User,
 }
 
 impl Client {
-    pub fn new(socket: WebSocket, user: User) -> Self {
-        Self { socket, user }
+    pub fn new(socket: WebSocket, user: User, doc_handle: Sender<String>) -> Self {
+        let (tx, rx) = channel(128);
+        Self {
+            id: Uuid::new_v4(),
+            tx,
+            rx,
+            doc_handle,
+            socket,
+            user,
+        }
     }
 
     #[instrument(name="websocket connection", skip(self), fields(user = ?self.user))]

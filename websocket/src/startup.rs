@@ -13,7 +13,10 @@ use std::{
     str::FromStr,
     sync::{Arc, Mutex},
 };
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    sync::mpsc::{channel, Sender},
+};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use uuid::Uuid;
 
@@ -22,7 +25,7 @@ use crate::{
     configuration::{DatabaseSettings, Settings},
     document::Document,
     error::ApiError,
-    websocket::{handle_socket, room::Room},
+    websocket::{handle_socket, syncer::Syncer},
 };
 
 pub struct Application {
@@ -32,8 +35,8 @@ pub struct Application {
 }
 
 pub struct ApplicationState {
-    pub pool: PgPool,
-    pub rooms: Mutex<HashMap<Uuid, Room>>,
+    pool: PgPool,
+    doc_handles: Mutex<HashMap<Uuid, Sender<String>>>,
 }
 
 impl Application {
@@ -49,7 +52,7 @@ impl Application {
 
         let application_state = Arc::new(ApplicationState {
             pool: connection_pool,
-            rooms: Mutex::new(HashMap::new()),
+            doc_handles: Mutex::new(HashMap::new()),
         });
 
         let router = Router::new()
@@ -130,5 +133,22 @@ async fn ws_handler(
         return Err(ApiError::DocumentNotFoundError(document_id));
     }
 
-    Ok(ws.on_upgrade(move |socket| handle_socket(socket, user, document, state)))
+    let doc_handle = get_or_create_doc_handle(state, document);
+
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, user, doc_handle)))
+}
+
+fn get_or_create_doc_handle(state: Arc<ApplicationState>, document: Document) -> Sender<String> {
+    let mut rooms = state.doc_handles.lock().expect("received rooms lock");
+    let tx = rooms.get(&document.id);
+    if let Some(tx) = tx {
+        return tx.clone();
+    }
+
+    let (tx, rx) = channel::<String>(128);
+    rooms.insert(document.id, tx.clone());
+    let room = Syncer::new(state.pool.clone(), document, rx);
+    room.run();
+
+    tx
 }
