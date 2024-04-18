@@ -17,6 +17,6 @@ pub async fn handle_socket(socket: WebSocket, user: User, doc_handle: Sender<Mes
 }
 
 pub enum Message {
-    Connect(Uuid),
+    Connect(Uuid, Sender<Message>),
     Disconnect(Uuid),
 }

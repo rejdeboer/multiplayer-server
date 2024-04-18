@@ -35,7 +35,7 @@ impl Client {
     #[instrument(name="websocket client", skip(self), fields(user = ?self.user))]
     pub async fn run(&mut self) {
         self.doc_handle
-            .send(Message::Connect(self.id))
+            .send(Message::Connect(self.id, self.tx.clone()))
             .await
             .expect("client connects to syncer");
         tracing::info!("new client connected");
