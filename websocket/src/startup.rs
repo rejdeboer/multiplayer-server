@@ -25,7 +25,7 @@ use crate::{
     configuration::{DatabaseSettings, Settings},
     document::Document,
     error::ApiError,
-    websocket::{handle_socket, syncer::Syncer},
+    websocket::{handle_socket, Message, Syncer},
 };
 
 pub struct Application {
@@ -36,7 +36,7 @@ pub struct Application {
 
 pub struct ApplicationState {
     pool: PgPool,
-    doc_handles: Mutex<HashMap<Uuid, Sender<String>>>,
+    doc_handles: Mutex<HashMap<Uuid, Sender<Message>>>,
 }
 
 impl Application {
@@ -138,14 +138,14 @@ async fn ws_handler(
     Ok(ws.on_upgrade(move |socket| handle_socket(socket, user, doc_handle)))
 }
 
-fn get_or_create_doc_handle(state: Arc<ApplicationState>, document: Document) -> Sender<String> {
+fn get_or_create_doc_handle(state: Arc<ApplicationState>, document: Document) -> Sender<Message> {
     let mut doc_handles = state.doc_handles.lock().expect("received handles lock");
     let tx = doc_handles.get(&document.id);
     if let Some(tx) = tx {
         return tx.clone();
     }
 
-    let (tx, rx) = channel::<String>(128);
+    let (tx, rx) = channel::<Message>(128);
     doc_handles.insert(document.id, tx.clone());
     let syncer = Syncer::new(state.pool.clone(), document, rx);
     syncer.run();

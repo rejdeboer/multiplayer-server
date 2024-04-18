@@ -6,15 +6,17 @@ use uuid::Uuid;
 
 use crate::document::Document;
 
+use super::Message;
+
 pub struct Syncer {
-    clients: HashMap<Uuid, Sender<String>>,
+    clients: HashMap<Uuid, Sender<Message>>,
     document: Document,
-    rx: Receiver<String>,
+    rx: Receiver<Message>,
     pool: PgPool,
 }
 
 impl Syncer {
-    pub fn new(pool: PgPool, document: Document, rx: Receiver<String>) -> Self {
+    pub fn new(pool: PgPool, document: Document, rx: Receiver<Message>) -> Self {
         Self {
             clients: HashMap::new(),
             rx,
@@ -31,5 +33,5 @@ impl Syncer {
         });
     }
 
-    async fn process_message(&self, message: String) {}
+    async fn process_message(&self, message: Message) {}
 }
