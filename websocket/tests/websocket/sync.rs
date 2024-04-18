@@ -4,7 +4,7 @@ use tokio_tungstenite::tungstenite;
 use crate::helpers::spawn_app;
 
 #[tokio::test]
-async fn ping_pong_works() {
+async fn other_client_receives_sync() {
     let app = spawn_app().await;
     let mut client_a = app.create_owner_client().await;
     let mut client_b = app.create_owner_client().await;
