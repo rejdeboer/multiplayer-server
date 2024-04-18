@@ -139,16 +139,16 @@ async fn ws_handler(
 }
 
 fn get_or_create_doc_handle(state: Arc<ApplicationState>, document: Document) -> Sender<String> {
-    let mut rooms = state.doc_handles.lock().expect("received rooms lock");
-    let tx = rooms.get(&document.id);
+    let mut doc_handles = state.doc_handles.lock().expect("received handles lock");
+    let tx = doc_handles.get(&document.id);
     if let Some(tx) = tx {
         return tx.clone();
     }
 
     let (tx, rx) = channel::<String>(128);
-    rooms.insert(document.id, tx.clone());
-    let room = Syncer::new(state.pool.clone(), document, rx);
-    room.run();
+    doc_handles.insert(document.id, tx.clone());
+    let syncer = Syncer::new(state.pool.clone(), document, rx);
+    syncer.run();
 
     tx
 }
