@@ -1,3 +1,4 @@
+use futures::future::join_all;
 use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -10,7 +11,7 @@ use crate::document::Document;
 use super::Message;
 
 pub struct Syncer {
-    clients: HashMap<Uuid, Sender<Message>>,
+    clients: HashMap<Uuid, Sender<Vec<u8>>>,
     document: Document,
     rx: Receiver<Message>,
     pool: PgPool,
@@ -51,6 +52,16 @@ impl Syncer {
                 if self.clients.len() == 0 {
                     return ControlFlow::Break(());
                 };
+            }
+            Message::Sync(id, update) => {
+                join_all(
+                    self.clients
+                        .iter()
+                        .filter(|(client_id, _)| **client_id != id)
+                        .map(|(_, tx)| tx.send(update.clone()))
+                        .collect::<Vec<_>>(),
+                )
+                .await;
             }
         };
         ControlFlow::Continue(())

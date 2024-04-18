@@ -1,7 +1,8 @@
 use std::ops::ControlFlow;
 
 use axum::extract::ws::{Message as WSMessage, WebSocket};
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use futures::{stream::SplitSink, SinkExt, StreamExt};
+use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -9,54 +10,59 @@ use crate::auth::User;
 
 use super::Message;
 
+// WebSocket message type flags
+const MESSAGE_SYNC: u8 = 0;
+
 #[derive(Debug)]
 pub struct Client {
-    tx: Sender<Message>,
     id: Uuid,
-    rx: Receiver<Message>,
-    doc_handle: Sender<Message>,
-    socket: WebSocket,
+    client_tx: Sender<Vec<u8>>,
+    syncer_tx: Sender<Message>,
     user: User,
 }
 
 impl Client {
-    pub fn new(socket: WebSocket, user: User, doc_handle: Sender<Message>) -> Self {
-        let (tx, rx) = channel(128);
+    pub fn new(user: User, client_tx: Sender<Vec<u8>>, syncer_tx: Sender<Message>) -> Self {
         Self {
             id: Uuid::new_v4(),
-            tx,
-            rx,
-            doc_handle,
-            socket,
+            client_tx,
+            syncer_tx,
             user,
         }
     }
 
-    #[instrument(name="websocket client", skip(self), fields(user = ?self.user))]
-    pub async fn run(&mut self) {
-        self.doc_handle
-            .send(Message::Connect(self.id, self.tx.clone()))
+    #[instrument(name="websocket client", skip_all, fields(user = ?self.user))]
+    pub async fn run(self, socket: WebSocket, client_rx: Receiver<Vec<u8>>) {
+        let (ws_tx, mut ws_rx) = socket.split();
+
+        tokio::spawn(async move {
+            write_pump(ws_tx, client_rx).await;
+        });
+
+        self.syncer_tx
+            .send(Message::Connect(self.id, self.client_tx.clone()))
             .await
             .expect("client connects to syncer");
         tracing::info!("new client connected");
 
-        while let Some(Ok(msg)) = self.socket.recv().await {
-            if self.process_message(msg).is_break() {
+        while let Some(Ok(msg)) = ws_rx.next().await {
+            if self.read_message(msg).await.is_break() {
                 break;
             }
         }
 
-        self.doc_handle
+        self.syncer_tx
             .send(Message::Disconnect(self.id))
             .await
             .expect("client disconnects from syncer");
         tracing::info!("client disconnected");
     }
 
-    fn process_message(&self, msg: WSMessage) -> ControlFlow<(), ()> {
+    async fn read_message(&self, msg: WSMessage) -> ControlFlow<(), ()> {
         match msg {
-            WSMessage::Binary(d) => {
-                tracing::debug!(content=?d, "received bytes");
+            WSMessage::Binary(bytes) => {
+                tracing::debug!(?bytes, "received bytes");
+                self.read_binary_message(bytes).await;
             }
             WSMessage::Close(c) => {
                 if let Some(cf) = c {
@@ -71,5 +77,37 @@ impl Client {
             msg => tracing::warn!(?msg, "unhandled message"),
         }
         ControlFlow::Continue(())
+    }
+
+    async fn read_binary_message(&self, bytes: Vec<u8>) {
+        let message_type = bytes
+            .first()
+            .ok_or_else(|| {
+                tracing::error!("received empty binary message");
+                return;
+            })
+            .unwrap()
+            .clone();
+
+        match message_type {
+            MESSAGE_SYNC => {
+                self.syncer_tx
+                    .send(Message::Sync(self.id, bytes))
+                    .await
+                    .expect("sync message sent to syncer");
+            }
+            message_type => {
+                tracing::error!(message_type, "unsupported message type");
+            }
+        };
+    }
+}
+
+async fn write_pump(mut ws_tx: SplitSink<WebSocket, WSMessage>, mut client_rx: Receiver<Vec<u8>>) {
+    while let Some(msg) = client_rx.recv().await {
+        ws_tx
+            .send(WSMessage::Binary(msg))
+            .await
+            .expect("websocket message written");
     }
 }
