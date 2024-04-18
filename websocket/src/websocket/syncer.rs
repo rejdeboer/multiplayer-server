@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use sqlx::PgPool;
@@ -32,12 +32,27 @@ impl Syncer {
             async move {
                 tracing::info!("starting syncer");
                 while let Some(message) = self.rx.recv().await {
-                    self.process_message(message).await;
+                    if self.process_message(message).await.is_break() {
+                        break;
+                    };
                 }
             }
             .instrument(tracing::Span::current()),
         );
     }
 
-    async fn process_message(&self, message: Message) {}
+    async fn process_message(&mut self, message: Message) -> ControlFlow<(), ()> {
+        match message {
+            Message::Connect(id, tx) => {
+                self.clients.insert(id, tx);
+            }
+            Message::Disconnect(id) => {
+                self.clients.remove(&id);
+                if self.clients.len() == 0 {
+                    return ControlFlow::Break(());
+                };
+            }
+        };
+        ControlFlow::Continue(())
+    }
 }
