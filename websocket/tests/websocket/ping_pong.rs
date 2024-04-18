@@ -10,14 +10,14 @@ async fn ping_pong_works() {
     let ping_payload: Vec<u8> = vec![123];
 
     owner_client
-        .send(tungstenite::Message::Ping(ping_payload))
+        .send(tungstenite::Message::Ping(ping_payload.clone()))
         .await
         .unwrap();
 
     let pong_payload = match owner_client.next().await.unwrap().unwrap() {
         tungstenite::Message::Pong(payload) => payload,
-        other => panic!("expected a text message but got {other:?}"),
+        other => panic!("expected a pong message but got {other:?}"),
     };
 
-    assert_eq!(pong_payload.first().unwrap().clone(), 123 as u8);
+    assert_eq!(pong_payload, ping_payload);
 }
