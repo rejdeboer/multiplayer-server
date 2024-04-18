@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use sqlx::PgPool;
+use tracing::{instrument, Instrument};
 use uuid::Uuid;
 
 use crate::document::Document;
@@ -25,12 +26,17 @@ impl Syncer {
         }
     }
 
+    #[instrument(name="Syncer", skip(self), fields(document_id=%self.document.id))]
     pub fn run(mut self) {
-        tokio::spawn(async move {
-            while let Some(message) = self.rx.recv().await {
-                self.process_message(message).await;
+        tokio::spawn(
+            async move {
+                tracing::info!("starting syncer");
+                while let Some(message) = self.rx.recv().await {
+                    self.process_message(message).await;
+                }
             }
-        });
+            .instrument(tracing::Span::current()),
+        );
     }
 
     async fn process_message(&self, message: Message) {}
