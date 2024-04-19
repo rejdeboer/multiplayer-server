@@ -5,13 +5,11 @@ import (
 
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/routes/middleware"
-	"github.com/rejdeboer/multiplayer-server/internal/websocket"
 	"github.com/rs/zerolog"
 )
 
 func NewRouter(settings configuration.AuthSettings) http.Handler {
 	mux := http.NewServeMux()
-	hub := websocket.NewHub()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		l := zerolog.Ctx(r.Context())
@@ -25,7 +23,6 @@ func NewRouter(settings configuration.AuthSettings) http.Handler {
 
 	mux.HandleFunc("POST /user", createUser)
 	mux.HandleFunc("POST /token", getToken(settings.SigningKey))
-	mux.HandleFunc("GET /sync/{document-id}", middleware.WithAuth(handleSync(hub), settings.SigningKey))
 
 	return mux
 }
