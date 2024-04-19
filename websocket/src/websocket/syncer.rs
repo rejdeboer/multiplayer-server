@@ -62,8 +62,49 @@ impl Syncer {
                         .collect::<Vec<_>>(),
                 )
                 .await;
+
+                self.store_update(update).await;
             }
         };
         ControlFlow::Continue(())
+    }
+
+    async fn store_update(&self, update: Vec<u8>) {
+        let pool = self.pool.clone();
+        let document_id = self.document.id;
+
+        tokio::spawn(async move {
+            let mut txn = pool
+                .begin()
+                .await
+                .expect("receive pool connection for update transaction");
+
+            let current_clock = sqlx::query!(
+                r#"
+                SELECT COALESCE(MAX(clock), 0) as value 
+                FROM document_updates
+                WHERE document_id = $1;
+                "#,
+                document_id
+            )
+            .fetch_one(&mut *txn)
+            .await
+            .expect("retrieve current clock")
+            .value
+            .unwrap();
+
+            sqlx::query!(
+                r#"
+                INSERT INTO document_updates (document_id, clock, value)
+                VALUES($1, $2, $3);
+            "#,
+                document_id,
+                current_clock + 1,
+                update
+            )
+            .execute(&mut *txn)
+            .await
+            .expect("update stored");
+        });
     }
 }
