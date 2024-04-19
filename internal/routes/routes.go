@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewRouter(settings configuration.AuthSettings) http.Handler {
+func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
