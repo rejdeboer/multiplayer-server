@@ -1,6 +1,6 @@
 version: '3'
 services:
-  app:
+  http-api:
     depends_on: 
       - postgres
     image: cosmtrek/air
@@ -18,6 +18,13 @@ services:
         && migrate -database "postgres://postgres:password@postgres:5432/multiplayer?sslmode=disable" -path=db/migrations up
         && /go/bin/air -c .air.toml
       "
+  websocket-api:
+    depends_on:
+      - postgres
+    build: ./websocket
+    working_dir: /app
+    ports:
+      - 8001:8001
   postgres:
     image: postgres:16-alpine
     hostname: postgres

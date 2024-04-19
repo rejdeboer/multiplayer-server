@@ -3,7 +3,6 @@ name = "websocket"
 version = "0.1.0"
 authors = ["Rick de Boer <rick.deboer@live.nl>"]
 edition = "2021"
-publish = false
 
 [lib]
 path = "src/lib.rs"

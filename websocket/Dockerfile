@@ -13,7 +13,7 @@ COPY . .
 ENV SQLX_OFFLINE true
 RUN cargo build --release --bin websocket
 
-FROM debian:bullseye-slim AS runtime
+FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 RUN apt-get update -y \
 	&& apt-get install -y --no-install-recommends openssl ca-certificates \
@@ -23,5 +23,4 @@ RUN apt-get update -y \
 
 COPY --from=builder /app/target/release/websocket websocket
 COPY configuration configuration
-ENV ENVIRONMENT production
 ENTRYPOINT ["./websocket"]
