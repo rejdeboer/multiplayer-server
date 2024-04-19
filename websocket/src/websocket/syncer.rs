@@ -94,7 +94,7 @@ impl Syncer {
 
             let current_clock = sqlx::query!(
                 r#"
-                SELECT COALESCE(MAX(clock), 0) as value 
+                SELECT COALESCE(MAX(clock), -1) as value 
                 FROM document_updates
                 WHERE document_id = $1;
                 "#,
@@ -118,6 +118,8 @@ impl Syncer {
             .execute(&mut *txn)
             .await
             .expect("update stored");
+
+            txn.commit().await.expect("transcation committed");
         });
     }
 }
