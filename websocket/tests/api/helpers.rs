@@ -29,8 +29,8 @@ impl TestApp {
         &self,
     ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
         let test_document = self.test_document().await;
-        let owner_token = get_signed_jwt(test_document.1, &self.signing_key);
-        let request = create_connection_request(&self.address, &owner_token, test_document.0);
+        let owner_token = self.signed_jwt(test_document.1);
+        let request = self.create_connection_request(&owner_token, test_document.0);
 
         let (socket, _response) = tokio_tungstenite::connect_async(request)
             .await
@@ -39,12 +39,49 @@ impl TestApp {
         socket
     }
 
-    async fn test_document(&self) -> (Uuid, Uuid) {
+    pub async fn test_document(&self) -> (Uuid, Uuid) {
         let row = sqlx::query!("SELECT id, owner_id FROM documents LIMIT 1")
             .fetch_one(&self.db_pool)
             .await
             .expect("fetched document");
         (row.id, row.owner_id)
+    }
+
+    pub fn signed_jwt(&self, user_id: Uuid) -> String {
+        let claims = Claims {
+            user_id: user_id.to_string(),
+            username: Uuid::new_v4().to_string(),
+            exp: SystemTime::now()
+                .duration_since(UNIX_EPOCH - Duration::from_secs(3600))
+                .unwrap()
+                .as_secs(),
+        };
+
+        jsonwebtoken::encode(
+            &jsonwebtoken::Header::default(),
+            &claims,
+            &jsonwebtoken::EncodingKey::from_secret(self.signing_key.expose_secret().as_ref()),
+        )
+        .expect("token encoded")
+        .to_string()
+    }
+
+    pub fn create_connection_request(&self, token: &str, document_id: Uuid) -> Request {
+        let url_str = &*format!("{}/sync/{}", self.address, document_id.to_string());
+        let url = url::Url::parse(url_str).unwrap();
+        let host = url.host_str().expect("Host should be found in URL");
+
+        Request::builder()
+            .method("GET")
+            .uri(url_str)
+            .header("Host", host)
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Upgrade", "websocket")
+            .header("Connection", "upgrade")
+            .header("Sec-Websocket-Key", generate_websocket_key())
+            .header("Sec-Websocket-Version", "13")
+            .body(())
+            .unwrap()
     }
 }
 
@@ -127,43 +164,6 @@ async fn add_test_user(pool: &PgPool) -> Uuid {
     .expect("test user created");
 
     row.id
-}
-
-fn get_signed_jwt(user_id: Uuid, signing_key: &Secret<String>) -> String {
-    let claims = Claims {
-        user_id: user_id.to_string(),
-        username: Uuid::new_v4().to_string(),
-        exp: SystemTime::now()
-            .duration_since(UNIX_EPOCH - Duration::from_secs(3600))
-            .unwrap()
-            .as_secs(),
-    };
-
-    jsonwebtoken::encode(
-        &jsonwebtoken::Header::default(),
-        &claims,
-        &jsonwebtoken::EncodingKey::from_secret(signing_key.expose_secret().as_ref()),
-    )
-    .expect("token encoded")
-    .to_string()
-}
-
-fn create_connection_request(address: &str, token: &str, document_id: Uuid) -> Request {
-    let url_str = &*format!("{}/sync/{}", address, document_id.to_string());
-    let url = url::Url::parse(url_str).unwrap();
-    let host = url.host_str().expect("Host should be found in URL");
-
-    Request::builder()
-        .method("GET")
-        .uri(url_str)
-        .header("Host", host)
-        .header("Authorization", format!("Bearer {}", token))
-        .header("Upgrade", "websocket")
-        .header("Connection", "upgrade")
-        .header("Sec-Websocket-Key", generate_websocket_key())
-        .header("Sec-Websocket-Version", "13")
-        .body(())
-        .unwrap()
 }
 
 fn generate_websocket_key() -> String {
