@@ -49,7 +49,7 @@ impl Syncer {
             }
             Message::Disconnect(id) => {
                 self.clients.remove(&id);
-                if self.clients.len() == 0 {
+                if self.clients.is_empty() {
                     return ControlFlow::Break(());
                 };
             }

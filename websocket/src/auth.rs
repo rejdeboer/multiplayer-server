@@ -14,6 +14,8 @@ use uuid::Uuid;
 
 use crate::error::ApiError;
 
+const AUTH_SEPARATOR: char = ' ';
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     #[serde(deserialize_with = "deserialize_number_from_string")]
@@ -39,7 +41,7 @@ pub async fn auth_middleware(
         .and_then(|header| header.to_str().ok())
         .ok_or_else(|| ApiError::AuthError("auth header is missing".to_string()))?;
 
-    let mut auth_header_parts = auth_header.split(" ");
+    let mut auth_header_parts = auth_header.split(AUTH_SEPARATOR);
     if auth_header_parts.next() != Some("Bearer") {
         return Err(ApiError::AuthError(
             "auth header bearer prefix missing".to_string(),
@@ -69,7 +71,7 @@ fn decode_jwt(
     signing_key: Secret<String>,
 ) -> jsonwebtoken::errors::Result<TokenData<Claims>> {
     decode(
-        &token,
+        token,
         &DecodingKey::from_secret(signing_key.expose_secret().as_ref()),
         &Validation::new(jsonwebtoken::Algorithm::HS256),
     )

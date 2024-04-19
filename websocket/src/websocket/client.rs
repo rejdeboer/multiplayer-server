@@ -80,14 +80,11 @@ impl Client {
     }
 
     async fn read_binary_message(&self, bytes: Vec<u8>) {
-        let message_type = bytes
-            .first()
-            .ok_or_else(|| {
-                tracing::error!("received empty binary message");
-                return;
-            })
-            .unwrap()
-            .clone();
+        if bytes.is_empty() {
+            tracing::error!("received empty binary message");
+            return;
+        }
+        let message_type = *bytes.first().unwrap();
 
         match message_type {
             MESSAGE_SYNC => {
