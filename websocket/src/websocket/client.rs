@@ -10,9 +10,6 @@ use crate::auth::User;
 
 use super::Message;
 
-// WebSocket message type flags
-const MESSAGE_SYNC: u8 = 0;
-
 #[derive(Debug)]
 pub struct Client {
     id: Uuid,
@@ -84,14 +81,20 @@ impl Client {
             tracing::error!("received empty binary message");
             return;
         }
-        let message_type = *bytes.first().unwrap();
+        let message_type = *bytes.last().unwrap();
 
         match message_type {
-            MESSAGE_SYNC => {
+            super::MESSAGE_SYNC => {
                 self.syncer_tx
                     .send(Message::Sync(self.id, bytes))
                     .await
-                    .expect("sync message sent to syncer");
+                    .expect("Sync message sent to syncer");
+            }
+            super::MESSAGE_GET_DIFF => {
+                self.syncer_tx
+                    .send(Message::GetDiff(self.id, bytes))
+                    .await
+                    .expect("GetDiff message sent to syncer");
             }
             message_type => {
                 tracing::error!(message_type, "unsupported message type");

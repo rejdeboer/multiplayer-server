@@ -1,6 +1,10 @@
 use futures::future::join_all;
 use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
+use yrs::{
+    updates::{decoder::Decode, encoder::Encode},
+    Update,
+};
 
 use sqlx::PgPool;
 use tracing::{instrument, Instrument};
@@ -53,7 +57,7 @@ impl Syncer {
                     return ControlFlow::Break(());
                 };
             }
-            Message::Sync(id, update) => {
+            Message::Sync(id, mut update) => {
                 join_all(
                     self.clients
                         .iter()
@@ -63,7 +67,16 @@ impl Syncer {
                 )
                 .await;
 
+                // Remove message type
+                update.pop();
+
                 self.store_update(update).await;
+            }
+            // TODO: Actually compute diff, instead of sending whole document as update
+            Message::GetDiff(id, _sv) => {
+                tracing::info!(%id, "received GetDiff message");
+                let client_tx = self.clients.get(&id).expect("get client_tx").clone();
+                send_diff(client_tx, _sv, self.document.id, self.pool.clone()).await;
             }
         };
         ControlFlow::Continue(())
@@ -107,22 +120,41 @@ impl Syncer {
             .expect("update stored");
         });
     }
+}
 
-    async fn get_document_updates(&self) -> Vec<Vec<u8>> {
-        sqlx::query!(
-            r#"
-            SELECT value
-            FROM document_updates
-            WHERE document_id = $1
-            ORDER BY clock;
-            "#,
-            self.document.id
-        )
-        .fetch_all(&self.pool)
-        .await
-        .expect("retrieve document updates")
-        .into_iter()
-        .map(|update| update.value)
-        .collect::<_>()
-    }
+async fn send_diff(client_tx: Sender<Vec<u8>>, _sv: Vec<u8>, document_id: Uuid, pool: PgPool) {
+    tokio::spawn(async move {
+        let encoded_updates = get_document_updates(document_id, pool).await;
+
+        let updates = encoded_updates
+            .into_iter()
+            .map(|update| Update::decode_v1(&update).expect("update decoded"))
+            .collect::<Vec<Update>>();
+
+        let mut update = Update::merge_updates(updates).encode_v1();
+        update.push(super::MESSAGE_SYNC);
+
+        client_tx
+            .send(update)
+            .await
+            .expect("document updates sent to client");
+    });
+}
+
+async fn get_document_updates(document_id: Uuid, pool: PgPool) -> Vec<Vec<u8>> {
+    sqlx::query!(
+        r#"
+        SELECT value
+        FROM document_updates
+        WHERE document_id = $1
+        ORDER BY clock;
+        "#,
+        document_id
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("retrieve document updates")
+    .into_iter()
+    .map(|update| update.value)
+    .collect::<_>()
 }

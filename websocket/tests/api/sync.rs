@@ -8,7 +8,7 @@ async fn other_client_receives_sync() {
     let app = spawn_app().await;
     let mut client_a = app.create_owner_client().await;
     let mut client_b = app.create_owner_client().await;
-    let sync_payload: Vec<u8> = vec![0, 1, 2, 3];
+    let sync_payload: Vec<u8> = vec![1, 2, 3, 0];
 
     client_a
         .send(tungstenite::Message::Binary(sync_payload.clone()))
