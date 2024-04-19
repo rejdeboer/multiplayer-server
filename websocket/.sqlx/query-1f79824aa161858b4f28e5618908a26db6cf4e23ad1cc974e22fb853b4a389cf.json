@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO document_updates (document_id, clock, value)\n                VALUES($1, $2, $3);\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1f79824aa161858b4f28e5618908a26db6cf4e23ad1cc974e22fb853b4a389cf"
+}

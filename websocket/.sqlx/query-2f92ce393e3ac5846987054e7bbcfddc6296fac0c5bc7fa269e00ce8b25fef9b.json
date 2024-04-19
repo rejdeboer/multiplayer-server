@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT value\n            FROM document_updates\n            WHERE document_id = $1\n            ORDER BY clock;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2f92ce393e3ac5846987054e7bbcfddc6296fac0c5bc7fa269e00ce8b25fef9b"
+}

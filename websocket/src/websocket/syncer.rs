@@ -97,7 +97,7 @@ impl Syncer {
                 r#"
                 INSERT INTO document_updates (document_id, clock, value)
                 VALUES($1, $2, $3);
-            "#,
+                "#,
                 document_id,
                 current_clock + 1,
                 update
@@ -106,5 +106,23 @@ impl Syncer {
             .await
             .expect("update stored");
         });
+    }
+
+    async fn get_document_updates(&self) -> Vec<Vec<u8>> {
+        sqlx::query!(
+            r#"
+            SELECT value
+            FROM document_updates
+            WHERE document_id = $1
+            ORDER BY clock;
+            "#,
+            self.document.id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .expect("retrieve document updates")
+        .into_iter()
+        .map(|update| update.value)
+        .collect::<_>()
     }
 }
