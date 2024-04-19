@@ -1,10 +1,7 @@
 use futures::future::join_all;
 use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
-use yrs::{
-    updates::{decoder::Decode, encoder::Encode},
-    Update,
-};
+use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
 
 use sqlx::PgPool;
 use tracing::{instrument, Instrument};
@@ -72,11 +69,17 @@ impl Syncer {
 
                 self.store_update(update).await;
             }
-            // TODO: Actually compute diff, instead of sending whole document as update
-            Message::GetDiff(id, _sv) => {
+            Message::GetDiff(id, mut state_vector) => {
                 tracing::info!(%id, "received GetDiff message");
                 let client_tx = self.clients.get(&id).expect("get client_tx").clone();
-                send_diff(client_tx, _sv, self.document.id, self.pool.clone()).await;
+
+                // Pop the message type
+                state_vector.pop();
+                let state_vector =
+                    StateVector::decode_v1(&state_vector).expect("state vector decoded");
+
+                compute_and_send_diff(client_tx, state_vector, self.document.id, self.pool.clone())
+                    .await;
             }
         };
         ControlFlow::Continue(())
@@ -124,16 +127,16 @@ impl Syncer {
     }
 }
 
-async fn send_diff(client_tx: Sender<Vec<u8>>, _sv: Vec<u8>, document_id: Uuid, pool: PgPool) {
+async fn compute_and_send_diff(
+    client_tx: Sender<Vec<u8>>,
+    state_vector: StateVector,
+    document_id: Uuid,
+    pool: PgPool,
+) {
     tokio::spawn(async move {
         let encoded_updates = get_document_updates(document_id, pool).await;
 
-        let updates = encoded_updates
-            .into_iter()
-            .map(|update| Update::decode_v1(&update).expect("update decoded"))
-            .collect::<Vec<Update>>();
-
-        let mut update = Update::merge_updates(updates).encode_v1();
+        let mut update = compute_diff(state_vector, encoded_updates);
         update.push(super::MESSAGE_SYNC);
 
         client_tx
@@ -159,4 +162,18 @@ async fn get_document_updates(document_id: Uuid, pool: PgPool) -> Vec<Vec<u8>> {
     .into_iter()
     .map(|update| update.value)
     .collect::<_>()
+}
+
+fn compute_diff(state_vector: StateVector, encoded_updates: Vec<Vec<u8>>) -> Vec<u8> {
+    let updates = encoded_updates
+        .into_iter()
+        .map(|update| Update::decode_v1(&update).expect("update decoded"))
+        .collect::<Vec<Update>>();
+
+    let merged = Update::merge_updates(updates);
+    let doc = Doc::new();
+    let mut txn = doc.transact_mut();
+    txn.apply_update(merged);
+
+    txn.encode_diff_v1(&state_vector)
 }
