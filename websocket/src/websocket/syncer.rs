@@ -89,41 +89,39 @@ impl Syncer {
         let pool = self.pool.clone();
         let document_id = self.document.id;
 
-        tokio::spawn(async move {
-            let mut txn = pool
-                .begin()
-                .await
-                .expect("receive pool connection for update transaction");
+        let mut txn = pool
+            .begin()
+            .await
+            .expect("receive pool connection for update transaction");
 
-            let current_clock = sqlx::query!(
-                r#"
+        let current_clock = sqlx::query!(
+            r#"
                 SELECT COALESCE(MAX(clock), -1) as value 
                 FROM document_updates
                 WHERE document_id = $1;
                 "#,
-                document_id
-            )
-            .fetch_one(&mut *txn)
-            .await
-            .expect("retrieve current clock")
-            .value
-            .unwrap();
+            document_id
+        )
+        .fetch_one(&mut *txn)
+        .await
+        .expect("retrieve current clock")
+        .value
+        .unwrap();
 
-            sqlx::query!(
-                r#"
+        sqlx::query!(
+            r#"
                 INSERT INTO document_updates (document_id, clock, value)
                 VALUES($1, $2, $3);
                 "#,
-                document_id,
-                current_clock + 1,
-                update
-            )
-            .execute(&mut *txn)
-            .await
-            .expect("update stored");
+            document_id,
+            current_clock + 1,
+            update
+        )
+        .execute(&mut *txn)
+        .await
+        .expect("update stored");
 
-            txn.commit().await.expect("transcation committed");
-        });
+        txn.commit().await.expect("transcation committed");
     }
 }
 
@@ -133,17 +131,15 @@ async fn compute_and_send_diff(
     document_id: Uuid,
     pool: PgPool,
 ) {
-    tokio::spawn(async move {
-        let encoded_updates = get_document_updates(document_id, pool).await;
+    let encoded_updates = get_document_updates(document_id, pool).await;
 
-        let mut update = compute_diff(state_vector, encoded_updates);
-        update.push(super::MESSAGE_SYNC);
+    let mut update = compute_diff(state_vector, encoded_updates);
+    update.push(super::MESSAGE_SYNC);
 
-        client_tx
-            .send(update)
-            .await
-            .expect("document updates sent to client");
-    });
+    client_tx
+        .send(update)
+        .await
+        .expect("document updates sent to client");
 }
 
 async fn get_document_updates(document_id: Uuid, pool: PgPool) -> Vec<Vec<u8>> {
