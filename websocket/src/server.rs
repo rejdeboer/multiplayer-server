@@ -1,5 +1,5 @@
 use axum::{
-    extract::{ConnectInfo, Path, Query, State, WebSocketUpgrade},
+    extract::{ConnectInfo, Path, State, WebSocketUpgrade},
     middleware,
     response::Response,
     routing::get,
