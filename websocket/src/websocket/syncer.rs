@@ -1,7 +1,10 @@
 use futures::future::join_all;
 use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
-use yrs::{updates::decoder::Decode, Doc, ReadTxn, StateVector, Transact, Update};
+use yrs::{
+    updates::{decoder::Decode, encoder::Encode},
+    Update,
+};
 
 use sqlx::PgPool;
 use tracing::{instrument, Instrument};
@@ -75,8 +78,6 @@ impl Syncer {
 
                 // Pop the message type
                 state_vector.pop();
-                let state_vector =
-                    StateVector::decode_v1(&state_vector).expect("state vector decoded");
 
                 compute_and_send_diff(client_tx, state_vector, self.document.id, self.pool.clone())
                     .await;
@@ -127,7 +128,7 @@ impl Syncer {
 
 async fn compute_and_send_diff(
     client_tx: Sender<Vec<u8>>,
-    state_vector: StateVector,
+    state_vector: Vec<u8>,
     document_id: Uuid,
     pool: PgPool,
 ) {
@@ -160,16 +161,13 @@ async fn get_document_updates(document_id: Uuid, pool: PgPool) -> Vec<Vec<u8>> {
     .collect::<_>()
 }
 
-fn compute_diff(state_vector: StateVector, encoded_updates: Vec<Vec<u8>>) -> Vec<u8> {
+fn compute_diff(state_vector: Vec<u8>, encoded_updates: Vec<Vec<u8>>) -> Vec<u8> {
     let updates = encoded_updates
         .into_iter()
         .map(|update| Update::decode_v1(&update).expect("update decoded"))
         .collect::<Vec<Update>>();
 
-    let merged = Update::merge_updates(updates);
-    let doc = Doc::new();
-    let mut txn = doc.transact_mut();
-    txn.apply_update(merged);
+    let update = Update::merge_updates(updates).encode_v1();
 
-    txn.encode_diff_v1(&state_vector)
+    yrs::diff_updates_v1(update.as_slice(), state_vector.as_slice()).expect("computed diff")
 }
