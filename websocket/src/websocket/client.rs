@@ -84,7 +84,7 @@ impl Client {
         let message_type = *bytes.last().unwrap();
 
         match message_type {
-            super::MESSAGE_SYNC => {
+            super::MESSAGE_UPDATE => {
                 self.syncer_tx
                     .send(Message::Sync(self.id, bytes))
                     .await

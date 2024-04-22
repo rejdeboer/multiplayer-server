@@ -11,7 +11,7 @@ use self::client::Client;
 pub use syncer::Syncer;
 
 // WebSocket message type flags
-pub const MESSAGE_SYNC: u8 = 0;
+pub const MESSAGE_UPDATE: u8 = 0;
 pub const MESSAGE_GET_DIFF: u8 = 1;
 
 pub async fn handle_socket(socket: WebSocket, user: User, doc_handle: Sender<Message>) {

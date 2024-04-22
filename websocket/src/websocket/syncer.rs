@@ -93,7 +93,7 @@ impl Syncer {
                 let mut diff =
                     compute_diff(state_vector, self.document_id, self.pool.clone()).await;
 
-                diff.push(super::MESSAGE_SYNC);
+                diff.push(super::MESSAGE_UPDATE);
 
                 client_tx
                     .send(diff)

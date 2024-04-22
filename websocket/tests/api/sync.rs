@@ -24,7 +24,7 @@ async fn other_client_receives_sync() {
 
     let diff = doc_a.transact().encode_diff_v1(&server_sv);
     let mut update = diff.clone();
-    update.push(websocket::websocket::MESSAGE_SYNC);
+    update.push(websocket::websocket::MESSAGE_UPDATE);
 
     client_a
         .send(tungstenite::Message::Binary(update))
@@ -33,7 +33,7 @@ async fn other_client_receives_sync() {
 
     match client_b.next().await.unwrap().unwrap() {
         tungstenite::Message::Binary(mut received) => match received.pop() {
-            Some(websocket::websocket::MESSAGE_SYNC) => assert_eq!(diff, received),
+            Some(websocket::websocket::MESSAGE_UPDATE) => assert_eq!(diff, received),
             other => panic!("expected a sync or get_diff message but got {other:?}"),
         },
         other => panic!("expected a binary message but got {other:?}"),
@@ -54,7 +54,7 @@ async fn get_diff_after_update() {
     }
 
     let mut update = doc_a.transact().encode_diff_v1(&server_sv);
-    update.push(websocket::websocket::MESSAGE_SYNC);
+    update.push(websocket::websocket::MESSAGE_UPDATE);
 
     let mut client_a = app.create_owner_client().await;
     client_a
@@ -79,7 +79,7 @@ async fn get_diff_after_update() {
     };
 
     let message_type = received.pop().unwrap();
-    assert_eq!(message_type, websocket::websocket::MESSAGE_SYNC);
+    assert_eq!(message_type, websocket::websocket::MESSAGE_UPDATE);
 
     doc_b
         .transact_mut()
