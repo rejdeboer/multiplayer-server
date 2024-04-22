@@ -8,9 +8,6 @@ async fn ping_pong_works() {
     let app = spawn_app().await;
     let mut owner_client = app.create_owner_client().await;
 
-    // GetDiff message
-    _ = owner_client.next().await;
-
     let ping_payload: Vec<u8> = vec![123];
 
     owner_client

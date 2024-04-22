@@ -31,18 +31,13 @@ async fn other_client_receives_sync() {
         .await
         .unwrap();
 
-    for _ in 0..2 {
-        match client_b.next().await.unwrap().unwrap() {
-            tungstenite::Message::Binary(mut received) => match received.pop() {
-                Some(websocket::websocket::MESSAGE_SYNC) => assert_eq!(diff, received),
-                Some(websocket::websocket::MESSAGE_GET_DIFF) => {
-                    assert_eq!(server_sv.encode_v1(), received)
-                }
-                other => panic!("expected a sync or get_diff message but got {other:?}"),
-            },
-            other => panic!("expected a binary message but got {other:?}"),
-        };
-    }
+    match client_b.next().await.unwrap().unwrap() {
+        tungstenite::Message::Binary(mut received) => match received.pop() {
+            Some(websocket::websocket::MESSAGE_SYNC) => assert_eq!(diff, received),
+            other => panic!("expected a sync or get_diff message but got {other:?}"),
+        },
+        other => panic!("expected a binary message but got {other:?}"),
+    };
 }
 
 #[tokio::test]
@@ -72,9 +67,6 @@ async fn get_diff_after_update() {
     sv_b.push(websocket::websocket::MESSAGE_GET_DIFF);
 
     let mut client_b = app.create_owner_client().await;
-
-    // GetDiff message
-    _ = client_b.next().await;
 
     client_b
         .send(tungstenite::Message::Binary(sv_b))

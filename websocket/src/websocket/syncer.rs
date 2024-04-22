@@ -60,13 +60,6 @@ impl Syncer {
     async fn process_message(&mut self, message: Message) -> ControlFlow<(), ()> {
         match message {
             Message::Connect(id, tx) => {
-                // Get diff from client
-                let mut get_diff_msg = self.state_vector.encode_v1();
-                get_diff_msg.push(super::MESSAGE_GET_DIFF);
-                tx.send(get_diff_msg)
-                    .await
-                    .expect("GetDiff message sent to client");
-
                 self.clients.insert(id, tx);
             }
             Message::Disconnect(id) => {
@@ -97,8 +90,23 @@ impl Syncer {
                 // Pop the message type
                 state_vector.pop();
 
-                compute_and_send_diff(client_tx, state_vector, self.document_id, self.pool.clone())
-                    .await;
+                let mut diff =
+                    compute_diff(state_vector, self.document_id, self.pool.clone()).await;
+
+                diff.push(super::MESSAGE_SYNC);
+
+                client_tx
+                    .send(diff)
+                    .await
+                    .expect("document updates sent to client");
+
+                // Get diff from client
+                let mut get_diff_msg = self.state_vector.encode_v1();
+                get_diff_msg.push(super::MESSAGE_GET_DIFF);
+                client_tx
+                    .send(get_diff_msg)
+                    .await
+                    .expect("GetDiff message sent to client");
             }
         };
         ControlFlow::Continue(())
@@ -165,21 +173,20 @@ impl Syncer {
     }
 }
 
-async fn compute_and_send_diff(
-    client_tx: Sender<Vec<u8>>,
-    state_vector: Vec<u8>,
-    document_id: Uuid,
-    pool: PgPool,
-) {
+async fn compute_diff(state_vector: Vec<u8>, document_id: Uuid, pool: PgPool) -> Vec<u8> {
     let encoded_updates = get_document_updates(document_id, pool).await;
 
-    let mut update = compute_diff(state_vector, encoded_updates);
-    update.push(super::MESSAGE_SYNC);
+    let updates = encoded_updates
+        .into_iter()
+        .map(|update| Update::decode_v1(&update).expect("update decoded"))
+        .collect::<Vec<Update>>();
 
-    client_tx
-        .send(update)
-        .await
-        .expect("document updates sent to client");
+    let update = Update::merge_updates(updates).encode_v1();
+
+    let diff =
+        yrs::diff_updates_v1(update.as_slice(), state_vector.as_slice()).expect("computed diff");
+
+    diff
 }
 
 async fn get_document_updates(document_id: Uuid, pool: PgPool) -> Vec<Vec<u8>> {
@@ -198,15 +205,4 @@ async fn get_document_updates(document_id: Uuid, pool: PgPool) -> Vec<Vec<u8>> {
     .into_iter()
     .map(|update| update.value)
     .collect::<_>()
-}
-
-fn compute_diff(state_vector: Vec<u8>, encoded_updates: Vec<Vec<u8>>) -> Vec<u8> {
-    let updates = encoded_updates
-        .into_iter()
-        .map(|update| Update::decode_v1(&update).expect("update decoded"))
-        .collect::<Vec<Update>>();
-
-    let update = Update::merge_updates(updates).encode_v1();
-
-    yrs::diff_updates_v1(update.as_slice(), state_vector.as_slice()).expect("computed diff")
 }
