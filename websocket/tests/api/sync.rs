@@ -10,21 +10,39 @@ use crate::helpers::spawn_app;
 #[tokio::test]
 async fn other_client_receives_sync() {
     let app = spawn_app().await;
+    let server_sv = StateVector::default();
     let mut client_a = app.create_owner_client().await;
     let mut client_b = app.create_owner_client().await;
-    let sync_payload: Vec<u8> = vec![1, 2, 3, 0];
+
+    let doc_a = Doc::new();
+    let text_a = doc_a.get_or_insert_text("test");
+
+    {
+        let mut txn = doc_a.transact_mut();
+        text_a.push(&mut txn, "test");
+    }
+
+    let diff = doc_a.transact().encode_diff_v1(&server_sv);
+    let mut update = diff.clone();
+    update.push(websocket::websocket::MESSAGE_SYNC);
 
     client_a
-        .send(tungstenite::Message::Binary(sync_payload.clone()))
+        .send(tungstenite::Message::Binary(update))
         .await
         .unwrap();
 
-    let received = match client_b.next().await.unwrap().unwrap() {
-        tungstenite::Message::Binary(payload) => payload,
-        other => panic!("expected a binary message but got {other:?}"),
-    };
-
-    assert_eq!(sync_payload, received);
+    for _ in 0..2 {
+        match client_b.next().await.unwrap().unwrap() {
+            tungstenite::Message::Binary(mut received) => match received.pop() {
+                Some(websocket::websocket::MESSAGE_SYNC) => assert_eq!(diff, received),
+                Some(websocket::websocket::MESSAGE_GET_DIFF) => {
+                    assert_eq!(server_sv.encode_v1(), received)
+                }
+                other => panic!("expected a sync or get_diff message but got {other:?}"),
+            },
+            other => panic!("expected a binary message but got {other:?}"),
+        };
+    }
 }
 
 #[tokio::test]
@@ -54,6 +72,10 @@ async fn get_diff_after_update() {
     sv_b.push(websocket::websocket::MESSAGE_GET_DIFF);
 
     let mut client_b = app.create_owner_client().await;
+
+    // GetDiff message
+    _ = client_b.next().await;
+
     client_b
         .send(tungstenite::Message::Binary(sv_b))
         .await

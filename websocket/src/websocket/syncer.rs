@@ -60,6 +60,13 @@ impl Syncer {
     async fn process_message(&mut self, message: Message) -> ControlFlow<(), ()> {
         match message {
             Message::Connect(id, tx) => {
+                // Get diff from client
+                let mut get_diff_msg = self.state_vector.encode_v1();
+                get_diff_msg.push(super::MESSAGE_GET_DIFF);
+                tx.send(get_diff_msg)
+                    .await
+                    .expect("GetDiff message sent to client");
+
                 self.clients.insert(id, tx);
             }
             Message::Disconnect(id) => {
