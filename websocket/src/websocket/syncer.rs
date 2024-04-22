@@ -1,7 +1,8 @@
-use futures::future::join_all;
+use futures::{future::join_all, Future};
 use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
 use yrs::{
+    sync::Awareness,
     updates::{decoder::Decode, encoder::Encode},
     StateVector, Update,
 };
@@ -18,6 +19,7 @@ pub struct Syncer {
     state_vector: StateVector,
     rx: Receiver<Message>,
     pool: PgPool,
+    awareness: Awareness,
 }
 
 impl Syncer {
@@ -39,6 +41,7 @@ impl Syncer {
             pool,
             document_id,
             state_vector,
+            awareness: Awareness::default(),
         }
     }
 
@@ -69,14 +72,7 @@ impl Syncer {
                 };
             }
             Message::Sync(id, mut update) => {
-                join_all(
-                    self.clients
-                        .iter()
-                        .filter(|(client_id, _)| **client_id != id)
-                        .map(|(_, tx)| tx.send(update.clone()))
-                        .collect::<Vec<_>>(),
-                )
-                .await;
+                self.forward_update(id, update.clone()).await;
 
                 // Remove message type
                 update.pop();
@@ -108,6 +104,10 @@ impl Syncer {
                     .await
                     .expect("GetDiff message sent to client");
             }
+            Message::UpdateAwareness(id, update) => {
+                self.forward_update(id, update);
+            } // Message::GetAwareness(id) => {
+              // }
         };
         ControlFlow::Continue(())
     }
@@ -170,6 +170,17 @@ impl Syncer {
         txn.commit().await.expect("transcation committed");
 
         self.state_vector.merge(state_vector);
+    }
+
+    async fn forward_update(&self, sender: Uuid, update: Vec<u8>) {
+        join_all(
+            self.clients
+                .iter()
+                .filter(|(client_id, _)| **client_id != sender)
+                .map(|(_, tx)| tx.send(update.clone()))
+                .collect::<Vec<_>>(),
+        )
+        .await;
     }
 }
 
