@@ -105,7 +105,7 @@ impl Syncer {
                     .expect("GetDiff message sent to client");
             }
             Message::UpdateAwareness(id, update) => {
-                self.forward_update(id, update);
+                self.forward_update(id, update).await;
             } // Message::GetAwareness(id) => {
               // }
         };

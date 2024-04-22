@@ -96,6 +96,12 @@ impl Client {
                     .await
                     .expect("GetDiff message sent to syncer");
             }
+            super::MESSAGE_AWARENESS_UPDATE => {
+                self.syncer_tx
+                    .send(Message::UpdateAwareness(self.id, bytes))
+                    .await
+                    .expect("UpdateAwareness message sent to syncer");
+            }
             message_type => {
                 tracing::error!(message_type, "unsupported message type");
             }
