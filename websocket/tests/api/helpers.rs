@@ -137,12 +137,11 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
 
 async fn add_test_document(pool: &PgPool, owner_id: Uuid) {
     sqlx::query!(
-        "INSERT INTO documents (id, name, owner_id, state_vector)
-        VALUES ($1, $2, $3, $4)",
+        "INSERT INTO documents (id, name, owner_id)
+        VALUES ($1, $2, $3)",
         Uuid::new_v4(),
         Uuid::new_v4().to_string(),
         owner_id,
-        vec![],
     )
     .execute(pool)
     .await

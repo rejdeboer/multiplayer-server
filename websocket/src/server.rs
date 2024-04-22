@@ -147,7 +147,7 @@ fn get_or_create_doc_handle(state: Arc<ApplicationState>, document: Document) ->
 
     let (tx, rx) = channel::<Message>(128);
     doc_handles.insert(document.id, tx.clone());
-    let syncer = Syncer::new(state.pool.clone(), document, rx);
+    let syncer = Syncer::new(state.pool.clone(), document.id, document.state_vector, rx);
     syncer.run();
 
     tx

@@ -3,35 +3,46 @@ use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
 use yrs::{
     updates::{decoder::Decode, encoder::Encode},
-    Update,
+    StateVector, Update,
 };
 
 use sqlx::PgPool;
 use tracing::{instrument, Instrument};
 use uuid::Uuid;
 
-use crate::document::Document;
-
 use super::Message;
 
 pub struct Syncer {
     clients: HashMap<Uuid, Sender<Vec<u8>>>,
-    document: Document,
+    document_id: Uuid,
+    state_vector: StateVector,
     rx: Receiver<Message>,
     pool: PgPool,
 }
 
 impl Syncer {
-    pub fn new(pool: PgPool, document: Document, rx: Receiver<Message>) -> Self {
+    pub fn new(
+        pool: PgPool,
+        document_id: Uuid,
+        state_vector: Option<Vec<u8>>,
+        rx: Receiver<Message>,
+    ) -> Self {
+        let state_vector = if let Some(sv) = state_vector {
+            StateVector::decode_v1(&sv).expect("state vector decoded")
+        } else {
+            StateVector::default()
+        };
+
         Self {
             clients: HashMap::new(),
             rx,
             pool,
-            document,
+            document_id,
+            state_vector,
         }
     }
 
-    #[instrument(name="Syncer", skip(self), fields(document_id=%self.document.id))]
+    #[instrument(name="Syncer", skip(self), fields(document_id=%self.document_id))]
     pub fn run(mut self) {
         tokio::spawn(
             async move {
@@ -79,16 +90,20 @@ impl Syncer {
                 // Pop the message type
                 state_vector.pop();
 
-                compute_and_send_diff(client_tx, state_vector, self.document.id, self.pool.clone())
+                compute_and_send_diff(client_tx, state_vector, self.document_id, self.pool.clone())
                     .await;
             }
         };
         ControlFlow::Continue(())
     }
 
-    async fn store_update(&self, update: Vec<u8>) {
+    async fn store_update(&mut self, update: Vec<u8>) {
         let pool = self.pool.clone();
-        let document_id = self.document.id;
+        let document_id = self.document_id;
+
+        let mut state_vector = Update::decode_v1(&update)
+            .expect("update decoded")
+            .state_vector();
 
         let mut txn = pool
             .begin()
@@ -109,6 +124,8 @@ impl Syncer {
         .value
         .unwrap();
 
+        state_vector.merge(self.state_vector.clone());
+
         sqlx::query!(
             r#"
                 INSERT INTO document_updates (document_id, clock, value)
@@ -120,9 +137,24 @@ impl Syncer {
         )
         .execute(&mut *txn)
         .await
-        .expect("update stored");
+        .expect("document update stored");
+
+        sqlx::query!(
+            r#"
+            UPDATE documents
+            SET state_vector = $2
+            WHERE id = $1
+            "#,
+            self.document_id,
+            state_vector.encode_v1()
+        )
+        .execute(&mut *txn)
+        .await
+        .expect("document updated");
 
         txn.commit().await.expect("transcation committed");
+
+        self.state_vector.merge(state_vector);
     }
 }
 
