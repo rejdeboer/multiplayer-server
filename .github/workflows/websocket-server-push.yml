@@ -158,3 +158,22 @@ jobs:
         id: build-image
         run: |
          az acr build --image rejdeboer.azurecr.io/multiplayer-websocket:${{ github.sha }} --registry rejdeboer --file "Dockerfile" .
+
+  modify-manifest:
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out config repo
+        uses: actions/checkout@v3
+        with:
+          repository: 'rejdeboer/multiplayer-deployment'
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Modify application image
+        run: |
+          git config user.email rick.deboer@live.nl
+          git config user.name rejdeboer
+          sed -i "s+rejdeboer.azurecr.io/multiplayer-websocket:.*+rejdeboer.azurecr.io/multiplayer-websocket:${{ github.sha }}+g" deploy/multiplayer-websocket-deployment.yml
+          git add .
+          git commit -m 'automated: update multiplayer-websocket image'
+          git push origin master
