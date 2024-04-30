@@ -6,6 +6,7 @@ use axum::{
     Extension, Router,
 };
 use axum_extra::TypedHeader;
+use serde::Deserialize;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::{
     collections::HashMap,
@@ -39,6 +40,11 @@ pub struct ApplicationState {
     doc_handles: Mutex<HashMap<Uuid, Sender<Message>>>,
 }
 
+#[derive(Deserialize)]
+pub struct QueryParams {
+    pub token: String,
+}
+
 impl Application {
     pub async fn build(settings: Settings) -> Result<Self, std::io::Error> {
         let address = format!(
@@ -56,7 +62,7 @@ impl Application {
         });
 
         let router = Router::new()
-            .route("/sync/:document_id", get(ws_handler))
+            .route("/:document_id", get(ws_handler))
             .route_layer(middleware::from_fn_with_state(
                 settings.application.signing_key,
                 auth_middleware,

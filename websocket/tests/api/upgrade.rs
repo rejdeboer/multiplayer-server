@@ -7,7 +7,7 @@ use crate::helpers::spawn_app;
 async fn unauthorized() {
     let app = spawn_app().await;
     let test_doc = app.test_document().await;
-    let request = app.create_connection_request("unauthorized token", test_doc.0);
+    let request = app.create_connection_request("unauthorized-token".to_string(), test_doc.0);
 
     let error = tokio_tungstenite::connect_async(request)
         .await
@@ -23,7 +23,7 @@ async fn unauthorized() {
 async fn doc_not_found() {
     let app = spawn_app().await;
     let test_doc = app.test_document().await;
-    let request = app.create_connection_request(&app.signed_jwt(test_doc.1), Uuid::new_v4());
+    let request = app.create_connection_request(app.signed_jwt(test_doc.1), Uuid::new_v4());
 
     let error = tokio_tungstenite::connect_async(request)
         .await
@@ -39,7 +39,7 @@ async fn doc_not_found() {
 async fn user_has_no_access() {
     let app = spawn_app().await;
     let test_doc = app.test_document().await;
-    let request = app.create_connection_request(&app.signed_jwt(Uuid::new_v4()), test_doc.0);
+    let request = app.create_connection_request(app.signed_jwt(Uuid::new_v4()), test_doc.0);
 
     let error = tokio_tungstenite::connect_async(request)
         .await

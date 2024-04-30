@@ -30,7 +30,7 @@ impl TestApp {
     ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
         let test_document = self.test_document().await;
         let owner_token = self.signed_jwt(test_document.1);
-        let request = self.create_connection_request(&owner_token, test_document.0);
+        let request = self.create_connection_request(owner_token, test_document.0);
 
         let (socket, _response) = tokio_tungstenite::connect_async(request)
             .await
@@ -66,8 +66,13 @@ impl TestApp {
         .to_string()
     }
 
-    pub fn create_connection_request(&self, token: &str, document_id: Uuid) -> Request {
-        let url_str = &*format!("{}/sync/{}", self.address, document_id.to_string());
+    pub fn create_connection_request(&self, token: String, document_id: Uuid) -> Request {
+        let url_str = &*format!(
+            "{}/{}?token={}",
+            self.address,
+            document_id.to_string(),
+            token
+        );
         let url = url::Url::parse(url_str).unwrap();
         let host = url.host_str().expect("Host should be found in URL");
 
@@ -75,7 +80,6 @@ impl TestApp {
             .method("GET")
             .uri(url_str)
             .header("Host", host)
-            .header("Authorization", format!("Bearer {}", token))
             .header("Upgrade", "websocket")
             .header("Connection", "upgrade")
             .header("Sec-Websocket-Key", generate_websocket_key())

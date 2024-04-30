@@ -1,8 +1,7 @@
 use std::str::FromStr;
 
 use axum::{
-    extract::{Request, State},
-    http::header,
+    extract::{Query, Request, State},
     middleware::Next,
     response::Response,
 };
@@ -12,9 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use uuid::Uuid;
 
-use crate::error::ApiError;
-
-const AUTH_SEPARATOR: char = ' ';
+use crate::{error::ApiError, server::QueryParams};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -31,28 +28,15 @@ pub struct User {
 }
 
 pub async fn auth_middleware(
+    // TODO: Using query parameters is not very secure
+    // But the WebSocket web API does not support the usage of custom headers
+    // It's probably better to use some ephemeral OTP
+    Query(params): Query<QueryParams>,
     State(signing_key): State<Secret<String>>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, ApiError> {
-    let auth_header = req
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|header| header.to_str().ok())
-        .ok_or_else(|| ApiError::AuthError("auth header is missing".to_string()))?;
-
-    let mut auth_header_parts = auth_header.split(AUTH_SEPARATOR);
-    if auth_header_parts.next() != Some("Bearer") {
-        return Err(ApiError::AuthError(
-            "auth header bearer prefix missing".to_string(),
-        ));
-    };
-
-    let token_string = auth_header_parts
-        .next()
-        .ok_or_else(|| ApiError::AuthError("bearer token missing".to_string()))?;
-
-    let token = decode_jwt(token_string, signing_key).map_err(|e| {
+    let token = decode_jwt(&params.token, signing_key).map_err(|e| {
         tracing::error!(?e, "JWT decoding error");
         ApiError::AuthError("invalid token".to_string())
     })?;
