@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/mail"
+	"strings"
 	"unicode"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -65,6 +66,16 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		Passhash: passhash,
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "username") {
+			httperrors.Write(w, "A user with that username already exists", http.StatusBadRequest)
+			log.Error().Err(err).Msg("user with username already exists")
+			return
+		}
+		if strings.Contains(err.Error(), "email") {
+			httperrors.Write(w, "A user with that email already exists", http.StatusBadRequest)
+			log.Error().Err(err).Msg("user with email already exists")
+			return
+		}
 		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("failed to push user to db")
 		return

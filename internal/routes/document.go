@@ -128,7 +128,7 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	docID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
-		httperrors.Write(w, "invalid document id, please use uuid format", http.StatusBadRequest)
+		httperrors.Write(w, "Invalid document id, please use uuid format", http.StatusBadRequest)
 		log.Error().Err(err).Msg("user used invalid document id format")
 		return
 	}
@@ -142,13 +142,13 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	document, err := q.GetDocumentByID(ctx, docID)
 	if err != nil {
-		httperrors.Write(w, "document not found", http.StatusNotFound)
+		httperrors.Write(w, "Document not found", http.StatusNotFound)
 		log.Error().Err(err).Str("document_id", docID.String()).Msg("document not found")
 		return
 	}
 
 	if document.OwnerID != userID && !slices.Contains(document.SharedWith, userID) {
-		httperrors.Write(w, "document not found", http.StatusNotFound)
+		httperrors.Write(w, "Document not found", http.StatusNotFound)
 		log.Error().Err(err).Str("document_id", docID.String()).Msg("user has no access rights")
 		return
 	}
