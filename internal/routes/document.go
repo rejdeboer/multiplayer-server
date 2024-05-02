@@ -19,9 +19,9 @@ type DocumentCreate struct {
 type DocumentResponse struct {
 	ID          uuid.UUID   `json:"id"`
 	Name        string      `json:"name"`
-	OwnerID     uuid.UUID   `json:"owner_id"`
-	SharedWith  []uuid.UUID `json:"shared_with"`
-	StateVector []byte      `json:"state_vector"`
+	OwnerID     uuid.UUID   `json:"ownerId"`
+	SharedWith  []uuid.UUID `json:"sharedWith"`
+	StateVector []byte      `json:"stateVector"`
 }
 
 type DocumentListItem struct {

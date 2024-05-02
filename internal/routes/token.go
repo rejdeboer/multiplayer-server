@@ -20,7 +20,7 @@ type UserCredentials struct {
 
 type TokenResponse struct {
 	Token            string `json:"token"`
-	ExpiresInSeconds uint16 `json:"expires_in_seconds"`
+	ExpiresInSeconds uint16 `json:"expiresInSeconds"`
 }
 
 func getToken(signingKey string, tokenExpirationSeconds uint16) http.HandlerFunc {
