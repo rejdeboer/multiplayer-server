@@ -63,6 +63,7 @@ func GetTestApp() TestApp {
 		user := createTestUser()
 		token, err := routes.GetJwt(
 			settings.Application.SigningKey,
+			settings.Application.TokenExpirationTime,
 			user.ID.String(),
 			user.Username,
 		)

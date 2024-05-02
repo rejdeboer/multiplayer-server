@@ -19,10 +19,11 @@ type UserCredentials struct {
 }
 
 type TokenResponse struct {
-	Token string `json:"token"`
+	Token            string `json:"token"`
+	ExpiresInSeconds uint16 `json:"expires_in_seconds"`
 }
 
-func getToken(signingKey string) http.HandlerFunc {
+func getToken(signingKey string, tokenExpirationSeconds uint16) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := zerolog.Ctx(ctx)
@@ -51,7 +52,7 @@ func getToken(signingKey string) http.HandlerFunc {
 			return
 		}
 
-		token, err := GetJwt(signingKey, user.ID.String(), user.Username)
+		token, err := GetJwt(signingKey, tokenExpirationSeconds, user.ID.String(), user.Username)
 		if err != nil {
 			httperrors.InternalServerError(w)
 			log.Error().Err(err).Msg("error signing jwt")
@@ -59,7 +60,8 @@ func getToken(signingKey string) http.HandlerFunc {
 		}
 
 		response, err := json.Marshal(TokenResponse{
-			Token: token,
+			Token:            token,
+			ExpiresInSeconds: tokenExpirationSeconds,
 		})
 		if err != nil {
 			httperrors.InternalServerError(w)
@@ -73,13 +75,13 @@ func getToken(signingKey string) http.HandlerFunc {
 	}
 }
 
-func GetJwt(signingKey string, userId string, username string) (string, error) {
+func GetJwt(signingKey string, tokenExpirationSeconds uint16, userId string, username string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = username
 	claims["user_id"] = userId
-	claims["exp"] = time.Now().Add(time.Hour * 4).Unix()
+	claims["exp"] = time.Now().Add(time.Second * time.Duration(tokenExpirationSeconds)).Unix()
 
 	tokenString, err := token.SignedString([]byte(signingKey))
 	if err != nil {
