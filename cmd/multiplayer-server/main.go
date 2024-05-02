@@ -10,6 +10,7 @@ import (
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
 	"github.com/rejdeboer/multiplayer-server/internal/middleware"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"github.com/rs/cors"
 )
 
 var log = logger.Get()
@@ -35,10 +36,11 @@ func main() {
 }
 
 func createHandler(settings configuration.Settings, pool *pgxpool.Pool) http.Handler {
-	handler := routes.NewRouter(settings.Auth)
+	handler := routes.NewRouter(settings.Application)
 	handler = middleware.WithLogging(handler)
 	handler = middleware.WithDb(handler, pool)
 	handler = middleware.WithBlobStorage(handler, settings.Azure)
+	handler = cors.Default().Handler(handler)
 
 	return handler
 }
