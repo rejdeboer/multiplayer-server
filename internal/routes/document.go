@@ -99,7 +99,7 @@ var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var documents []DocumentListItem
+	documents := []DocumentListItem{}
 	for _, document := range dbDocuments {
 		documents = append(documents, DocumentListItem{
 			ID:   document.ID,
