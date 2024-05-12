@@ -40,7 +40,15 @@ func createHandler(settings configuration.Settings, pool *pgxpool.Pool) http.Han
 	handler = middleware.WithLogging(handler)
 	handler = middleware.WithDb(handler, pool)
 	handler = middleware.WithBlobStorage(handler, settings.Azure)
-	handler = cors.Default().Handler(handler)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedHeaders:   []string{"*"},
+		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions},
+		AllowCredentials: true,
+	})
+
+	handler = c.Handler(handler)
 
 	return handler
 }
