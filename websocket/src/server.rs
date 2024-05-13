@@ -67,6 +67,7 @@ impl Application {
                 settings.application.signing_key,
                 auth_middleware,
             ))
+            .route("/", get(|| async { "Hello from websocket server" }))
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(DefaultMakeSpan::default().include_headers(true)),

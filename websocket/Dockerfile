@@ -23,4 +23,5 @@ RUN apt-get update -y \
 
 COPY --from=builder /app/target/release/websocket websocket
 COPY configuration configuration
+
 ENTRYPOINT ["./websocket"]

@@ -25,6 +25,8 @@ services:
     working_dir: /app
     ports:
       - 8001:8001
+    environment:
+      - APP_APPLICATION__HOST=0.0.0.0
   postgres:
     image: postgres:16-alpine
     hostname: postgres
