@@ -28,7 +28,7 @@ pub struct User {
 }
 
 pub async fn auth_middleware(
-    // TODO: Using query parameters is not very secure
+    // TODO: Using query parameters for the token is not very secure
     // But the WebSocket web API does not support the usage of custom headers
     // It's probably better to use some ephemeral OTP
     Query(params): Query<QueryParams>,
