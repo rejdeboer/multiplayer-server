@@ -129,7 +129,10 @@ async fn ws_handler(
     )
     .fetch_one(&state.pool)
     .await
-    .map_err(|_| ApiError::DocumentNotFoundError(document_id))?;
+    .map_err(|error| {
+        tracing::error!(?error, "error fetching document");
+        ApiError::DocumentNotFoundError(document_id)
+    })?;
 
     if document.owner_id != user.id {
         tracing::error!(
