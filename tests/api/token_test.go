@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 )
