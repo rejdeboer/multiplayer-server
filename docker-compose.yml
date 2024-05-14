@@ -21,13 +21,23 @@ services:
   websocket-api:
     depends_on:
       - postgres
-    build: ./websocket
+    build: 
+      context: ./websocket
+      dockerfile: Dockerfile
+      target: planner
     working_dir: /app
+    volumes:
+      - ./websocket/:/app
     ports:
       - 8001:8001
     environment:
       - APP_APPLICATION__HOST=0.0.0.0
       - APP_DATABASE__HOST=postgres
+      - SQLX_OFFLINE=true
+    entrypoint: bash -c "
+        cargo install cargo-watch
+        && cargo watch -x run
+      "
   postgres:
     image: postgres:16-alpine
     hostname: postgres
