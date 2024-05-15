@@ -1,4 +1,4 @@
-use futures::{future::join_all, Future};
+use futures::future::join_all;
 use std::{collections::HashMap, ops::ControlFlow};
 use tokio::sync::mpsc::{Receiver, Sender};
 use yrs::{
@@ -71,7 +71,7 @@ impl Syncer {
                     return ControlFlow::Break(());
                 };
             }
-            Message::Sync(id, mut update) => {
+            Message::Update(id, mut update) => {
                 self.forward_update(id, update.clone()).await;
 
                 // Remove message type
@@ -89,20 +89,20 @@ impl Syncer {
                 let mut diff =
                     compute_diff(state_vector, self.document_id, self.pool.clone()).await;
 
-                diff.push(super::MESSAGE_UPDATE);
+                diff.push(super::MESSAGE_SYNC_STEP_2);
 
                 client_tx
                     .send(diff)
                     .await
-                    .expect("document updates sent to client");
+                    .expect("SyncStep2 message sent to client");
 
                 // Get diff from client
                 let mut get_diff_msg = self.state_vector.encode_v1();
-                get_diff_msg.push(super::MESSAGE_GET_DIFF);
+                get_diff_msg.push(super::MESSAGE_SYNC_STEP_1);
                 client_tx
                     .send(get_diff_msg)
                     .await
-                    .expect("GetDiff message sent to client");
+                    .expect("SyncStep1 message sent to client");
             }
             Message::UpdateAwareness(id, update) => {
                 self.forward_update(id, update).await;
@@ -186,6 +186,10 @@ impl Syncer {
 
 async fn compute_diff(state_vector: Vec<u8>, document_id: Uuid, pool: PgPool) -> Vec<u8> {
     let encoded_updates = get_document_updates(document_id, pool).await;
+
+    if encoded_updates.len() == 0 {
+        return vec![];
+    }
 
     let updates = encoded_updates
         .into_iter()

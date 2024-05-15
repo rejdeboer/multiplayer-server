@@ -12,8 +12,9 @@ pub use syncer::Syncer;
 
 // WebSocket message type flags
 pub const MESSAGE_UPDATE: u8 = 0;
-pub const MESSAGE_GET_DIFF: u8 = 1;
-pub const MESSAGE_AWARENESS_UPDATE: u8 = 2;
+pub const MESSAGE_SYNC_STEP_1: u8 = 1;
+pub const MESSAGE_SYNC_STEP_2: u8 = 2;
+pub const MESSAGE_AWARENESS_UPDATE: u8 = 3;
 pub const MESSAGE_GET_AWARENESS: u8 = 3;
 
 pub async fn handle_socket(socket: WebSocket, user: User, doc_handle: Sender<Message>) {
@@ -27,7 +28,7 @@ pub async fn handle_socket(socket: WebSocket, user: User, doc_handle: Sender<Mes
 pub enum Message {
     Connect(Uuid, Sender<Vec<u8>>),
     Disconnect(Uuid),
-    Sync(Uuid, Vec<u8>),
+    Update(Uuid, Vec<u8>),
     GetDiff(Uuid, Vec<u8>),
     UpdateAwareness(Uuid, Vec<u8>),
     // GetAwareness(Uuid),

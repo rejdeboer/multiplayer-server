@@ -84,23 +84,23 @@ impl Client {
         let message_type = *bytes.last().unwrap();
 
         match message_type {
-            super::MESSAGE_UPDATE => {
+            super::MESSAGE_UPDATE | super::MESSAGE_SYNC_STEP_2 => {
                 self.syncer_tx
-                    .send(Message::Sync(self.id, bytes))
+                    .send(Message::Update(self.id, bytes))
                     .await
-                    .expect("Sync message sent to syncer");
+                    .expect("Update message sent to syncer");
             }
-            super::MESSAGE_GET_DIFF => {
+            super::MESSAGE_SYNC_STEP_1 => {
                 self.syncer_tx
                     .send(Message::GetDiff(self.id, bytes))
                     .await
                     .expect("GetDiff message sent to syncer");
             }
             super::MESSAGE_AWARENESS_UPDATE => {
-                self.syncer_tx
-                    .send(Message::UpdateAwareness(self.id, bytes))
-                    .await
-                    .expect("UpdateAwareness message sent to syncer");
+                // self.syncer_tx
+                //     .send(Message::UpdateAwareness(self.id, bytes))
+                //     .await
+                //     .expect("UpdateAwareness message sent to syncer");
             }
             message_type => {
                 tracing::error!(message_type, "unsupported message type");
