@@ -141,7 +141,7 @@ impl Syncer {
 
         state_vector.merge(self.state_vector.clone());
 
-        sqlx::query!(
+        let store_update = sqlx::query!(
             r#"
                 INSERT INTO document_updates (document_id, clock, value)
                 VALUES($1, $2, $3);
@@ -151,8 +151,12 @@ impl Syncer {
             update
         )
         .execute(&mut *txn)
-        .await
-        .expect("document update stored");
+        .await;
+
+        if store_update.is_err() {
+            txn.rollback().await.expect("transaction rolled back");
+            return;
+        }
 
         sqlx::query!(
             r#"
