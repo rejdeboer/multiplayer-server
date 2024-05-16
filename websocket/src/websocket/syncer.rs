@@ -1,8 +1,8 @@
 use futures::future::join_all;
+use rand::seq::IteratorRandom;
 use std::{collections::HashMap, ops::ControlFlow, sync::Arc};
 use tokio::sync::mpsc::{Receiver, Sender};
 use yrs::{
-    sync::Awareness,
     updates::{decoder::Decode, encoder::Encode},
     StateVector, Update,
 };
@@ -21,7 +21,6 @@ pub struct Syncer {
     state_vector: StateVector,
     rx: Receiver<Message>,
     state: Arc<ApplicationState>,
-    awareness: Awareness,
 }
 
 impl Syncer {
@@ -43,11 +42,10 @@ impl Syncer {
             state,
             document_id,
             state_vector,
-            awareness: Awareness::default(),
         }
     }
 
-    #[instrument(name="Syncer", skip(self), fields(document_id=%self.document_id))]
+    #[instrument(name="Syncer", parent=None, skip(self), fields(document_id=%self.document_id))]
     pub fn run(mut self) {
         tokio::spawn(
             async move {
@@ -114,8 +112,26 @@ impl Syncer {
             }
             Message::UpdateAwareness(id, update) => {
                 self.forward_update(id, update).await;
-            } // Message::GetAwareness(id) => {
-              // }
+            }
+            Message::GetAwareness(id) => {
+                // Pick random client to broadcast their awareness state
+                let client_id = self
+                    .clients
+                    .keys()
+                    .filter(|key| **key != id)
+                    .choose(&mut rand::thread_rng());
+
+                // If we got None, the sender is the only one editing the doc
+                if let Some(client_id) = client_id {
+                    let tx = self
+                        .clients
+                        .get(client_id)
+                        .expect("client_handle retrieved for get awareness");
+                    tx.send(vec![super::MESSAGE_GET_AWARENESS])
+                        .await
+                        .expect("get awareness message forwarded");
+                }
+            }
         };
         ControlFlow::Continue(())
     }

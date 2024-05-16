@@ -31,5 +31,5 @@ pub enum Message {
     Update(Uuid, Vec<u8>),
     GetDiff(Uuid, Vec<u8>),
     UpdateAwareness(Uuid, Vec<u8>),
-    // GetAwareness(Uuid),
+    GetAwareness(Uuid),
 }
