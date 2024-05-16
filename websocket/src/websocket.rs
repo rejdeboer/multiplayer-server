@@ -25,7 +25,7 @@ pub async fn handle_socket(socket: WebSocket, user: User, doc_handle: Sender<Mes
     client.run(socket, client_rx).await;
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Message {
     Connect(Uuid, Sender<Vec<u8>>),
     Disconnect(Uuid),

@@ -2,7 +2,7 @@ use std::ops::ControlFlow;
 
 use axum::extract::ws::{Message as WSMessage, WebSocket};
 use futures::{stream::SplitSink, SinkExt, StreamExt};
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::{error::SendError, Receiver, Sender};
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -59,7 +59,10 @@ impl Client {
         match msg {
             WSMessage::Binary(bytes) => {
                 tracing::debug!(?bytes, "received bytes");
-                self.read_binary_message(bytes).await;
+                if let Err(SendError(err)) = self.read_binary_message(bytes).await {
+                    tracing::error!(?err, "error reading binary message");
+                    return ControlFlow::Break(());
+                };
             }
             WSMessage::Close(c) => {
                 if let Some(cf) = c {
@@ -76,36 +79,34 @@ impl Client {
         ControlFlow::Continue(())
     }
 
-    async fn read_binary_message(&self, bytes: Vec<u8>) {
+    async fn read_binary_message(&self, bytes: Vec<u8>) -> Result<(), SendError<Message>> {
         if bytes.is_empty() {
             tracing::error!("received empty binary message");
-            return;
+            return Ok(());
         }
         let message_type = *bytes.last().unwrap();
 
         match message_type {
             super::MESSAGE_UPDATE | super::MESSAGE_SYNC_STEP_2 => {
-                self.syncer_tx
-                    .send(Message::Update(self.id, bytes))
-                    .await
-                    .expect("Update message sent to syncer");
+                tracing::info!("sending sync step 2 update");
+                self.syncer_tx.send(Message::Update(self.id, bytes)).await?;
             }
             super::MESSAGE_SYNC_STEP_1 => {
                 self.syncer_tx
                     .send(Message::GetDiff(self.id, bytes))
-                    .await
-                    .expect("GetDiff message sent to syncer");
+                    .await?;
             }
             super::MESSAGE_AWARENESS_UPDATE => {
                 self.syncer_tx
                     .send(Message::UpdateAwareness(self.id, bytes))
-                    .await
-                    .expect("UpdateAwareness message sent to syncer");
+                    .await?;
             }
             message_type => {
                 tracing::error!(message_type, "unsupported message type");
             }
         };
+
+        Ok(())
     }
 }
 
