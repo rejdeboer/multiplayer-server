@@ -1,5 +1,5 @@
 use futures::future::join_all;
-use std::{collections::HashMap, ops::ControlFlow};
+use std::{collections::HashMap, ops::ControlFlow, sync::Arc};
 use tokio::sync::mpsc::{Receiver, Sender};
 use yrs::{
     sync::Awareness,
@@ -11,6 +11,8 @@ use sqlx::PgPool;
 use tracing::{instrument, Instrument};
 use uuid::Uuid;
 
+use crate::server::ApplicationState;
+
 use super::Message;
 
 pub struct Syncer {
@@ -18,13 +20,13 @@ pub struct Syncer {
     document_id: Uuid,
     state_vector: StateVector,
     rx: Receiver<Message>,
-    pool: PgPool,
+    state: Arc<ApplicationState>,
     awareness: Awareness,
 }
 
 impl Syncer {
     pub fn new(
-        pool: PgPool,
+        state: Arc<ApplicationState>,
         document_id: Uuid,
         state_vector: Option<Vec<u8>>,
         rx: Receiver<Message>,
@@ -38,7 +40,7 @@ impl Syncer {
         Self {
             clients: HashMap::new(),
             rx,
-            pool,
+            state,
             document_id,
             state_vector,
             awareness: Awareness::default(),
@@ -68,6 +70,12 @@ impl Syncer {
             Message::Disconnect(id) => {
                 self.clients.remove(&id);
                 if self.clients.is_empty() {
+                    let mut doc_handles = self
+                        .state
+                        .doc_handles
+                        .lock()
+                        .expect("receive doc_handles lock");
+                    doc_handles.remove(&self.document_id);
                     return ControlFlow::Break(());
                 };
             }
@@ -87,7 +95,7 @@ impl Syncer {
                 state_vector.pop();
 
                 let mut diff =
-                    compute_diff(state_vector, self.document_id, self.pool.clone()).await;
+                    compute_diff(state_vector, self.document_id, self.state.pool.clone()).await;
 
                 diff.push(super::MESSAGE_SYNC_STEP_2);
 
@@ -113,7 +121,7 @@ impl Syncer {
     }
 
     async fn store_update(&mut self, update: Vec<u8>) {
-        let pool = self.pool.clone();
+        let pool = self.state.pool.clone();
         let document_id = self.document_id;
 
         let mut state_vector = Update::decode_v1(&update)

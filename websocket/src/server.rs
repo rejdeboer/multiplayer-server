@@ -36,8 +36,8 @@ pub struct Application {
 }
 
 pub struct ApplicationState {
-    pool: PgPool,
-    doc_handles: Mutex<HashMap<Uuid, Sender<Message>>>,
+    pub pool: PgPool,
+    pub doc_handles: Mutex<HashMap<Uuid, Sender<Message>>>,
 }
 
 #[derive(Deserialize)]
@@ -157,7 +157,7 @@ fn get_or_create_doc_handle(state: Arc<ApplicationState>, document: Document) ->
 
     let (tx, rx) = channel::<Message>(128);
     doc_handles.insert(document.id, tx.clone());
-    let syncer = Syncer::new(state.pool.clone(), document.id, document.state_vector, rx);
+    let syncer = Syncer::new(state.clone(), document.id, document.state_vector, rx);
     syncer.run();
 
     tx
