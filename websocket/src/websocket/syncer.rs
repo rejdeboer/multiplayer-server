@@ -52,6 +52,7 @@ impl Syncer {
                 tracing::info!("starting syncer");
                 while let Some(message) = self.rx.recv().await {
                     if self.process_message(message).await.is_break() {
+                        tracing::info!("stopping syncer");
                         break;
                     };
                 }
@@ -204,7 +205,7 @@ impl Syncer {
         join_all(
             self.clients
                 .iter()
-                .filter(|(client_id, _)| **client_id != sender)
+                .filter(|(client_id, _)| *client_id != &sender)
                 .map(|(_, tx)| tx.send(update.clone()))
                 .collect::<Vec<_>>(),
         )

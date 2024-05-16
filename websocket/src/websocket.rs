@@ -10,7 +10,8 @@ use crate::auth::User;
 use self::client::Client;
 pub use syncer::Syncer;
 
-// WebSocket message type flags
+// NOTE: WebSocket message type flags
+// The message type is appended to the end of each message, because pop() is more efficient than remove(0)
 pub const MESSAGE_UPDATE: u8 = 0;
 pub const MESSAGE_SYNC_STEP_1: u8 = 1;
 pub const MESSAGE_SYNC_STEP_2: u8 = 2;
