@@ -82,7 +82,7 @@ var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
-	id, err := uuid.Parse(r.PathValue("id"))
+	docID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		httperrors.Write(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg("invalid UUID provided")
@@ -92,13 +92,33 @@ var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	pool := ctx.Value("pool").(*pgxpool.Pool)
 	q := db.New(pool)
 
-	err = q.DeleteDocument(ctx, id)
+	userID, err := uuid.Parse(ctx.Value("user_id").(string))
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("failed to parse uuid")
+		return
+	}
+
+	document, err := q.GetDocumentByID(ctx, docID)
+	if err != nil {
+		httperrors.Write(w, "Document not found", http.StatusNotFound)
+		log.Error().Err(err).Str("document_id", docID.String()).Msg("document not found")
+		return
+	}
+
+	if document.OwnerID != userID {
+		httperrors.Write(w, "Document not found", http.StatusNotFound)
+		log.Error().Err(err).Str("document_id", docID.String()).Msg("user has no right to delete document")
+		return
+	}
+
+	err = q.DeleteDocument(ctx, docID)
 	if err != nil {
 		httperrors.Write(w, "document not found", http.StatusNotFound)
 		log.Error().Err(err).Msg("failed to delete document")
 		return
 	}
-	log.Info().Str("document_id", id.String()).Msg("deleted document")
+	log.Info().Str("document_id", docID.String()).Msg("deleted document")
 
 	w.WriteHeader(http.StatusAccepted)
 })

@@ -19,6 +19,7 @@ func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 
 	mux.HandleFunc("GET /document", middleware.WithAuth(listDocuments, settings.SigningKey))
 	mux.HandleFunc("GET /document/{id}", middleware.WithAuth(getDocument, settings.SigningKey))
+	mux.HandleFunc("DELETE /document/{id}", middleware.WithAuth(deleteDocument, settings.SigningKey))
 	mux.HandleFunc("POST /document", middleware.WithAuth(createDocument, settings.SigningKey))
 
 	mux.HandleFunc("POST /user", createUser)
