@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT COALESCE(MAX(clock), -1) as value \n                FROM document_updates\n                WHERE document_id = $1;\n                ",
+  "query": "\n            SELECT COALESCE(MAX(clock), -1) as value \n            FROM document_updates\n            WHERE document_id = $1;\n            ",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "67d5ba48584eca7430ec405ce7aeb5a29ad459d46909a313cfb77b9d64ee0b35"
+  "hash": "23cc258293fcdcb61e91da70e81456281dd8a8cbf42321f6e05bdf5922d6077c"
 }
