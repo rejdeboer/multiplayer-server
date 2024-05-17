@@ -92,6 +92,7 @@ func TestDeleteDocument(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		otherUser := createTestUser()
 		token, err := routes.GetJwt(
 			settings.Application.SigningKey,
