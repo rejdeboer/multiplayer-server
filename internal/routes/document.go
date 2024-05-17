@@ -78,6 +78,31 @@ var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	w.Write(response)
 })
 
+var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := zerolog.Ctx(ctx)
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		httperrors.Write(w, err.Error(), http.StatusBadRequest)
+		log.Error().Err(err).Msg("invalid UUID provided")
+		return
+	}
+
+	pool := ctx.Value("pool").(*pgxpool.Pool)
+	q := db.New(pool)
+
+	err = q.DeleteDocument(ctx, id)
+	if err != nil {
+		httperrors.Write(w, "document not found", http.StatusNotFound)
+		log.Error().Err(err).Msg("failed to delete document")
+		return
+	}
+	log.Info().Str("document_id", id.String()).Msg("deleted document")
+
+	w.WriteHeader(http.StatusAccepted)
+})
+
 var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
