@@ -72,6 +72,7 @@ impl Client {
                 }
                 return ControlFlow::Break(());
             }
+            // Ping pong is handled by Axum, don't need to do anything here
             WSMessage::Pong(_) => (),
             WSMessage::Ping(_) => (),
             msg => tracing::warn!(?msg, "unhandled message"),

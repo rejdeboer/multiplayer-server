@@ -152,10 +152,10 @@ impl Syncer {
 
         let current_clock = sqlx::query!(
             r#"
-                SELECT COALESCE(MAX(clock), -1) as value 
-                FROM document_updates
-                WHERE document_id = $1;
-                "#,
+            SELECT COALESCE(MAX(clock), -1) as value 
+            FROM document_updates
+            WHERE document_id = $1;
+            "#,
             document_id
         )
         .fetch_one(&mut *txn)
@@ -168,9 +168,9 @@ impl Syncer {
 
         let store_update = sqlx::query!(
             r#"
-                INSERT INTO document_updates (document_id, clock, value)
-                VALUES($1, $2, $3);
-                "#,
+            INSERT INTO document_updates (document_id, clock, value)
+            VALUES($1, $2, $3);
+            "#,
             document_id,
             current_clock + 1,
             update
