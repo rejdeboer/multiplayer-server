@@ -30,7 +30,8 @@ import (
 )
 
 var once sync.Once
-var testApp TestApp
+var settings configuration.Settings
+var handler http.Handler
 var dbpool *pgxpool.Pool
 var blobHostAndPort string
 
@@ -51,36 +52,34 @@ type TestUser struct {
 
 func GetTestApp() TestApp {
 	once.Do(func() {
-		settings := configuration.ReadConfiguration("../../configuration")
+		settings = configuration.ReadConfiguration("../../configuration")
 		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "https", "http")
 		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "azurite:10000", blobHostAndPort)
 
-		handler := routes.NewRouter(settings.Application)
+		handler = routes.NewRouter(settings.Application)
 		handler = middleware.WithLogging(handler)
 		handler = middleware.WithDb(handler, dbpool)
 		handler = middleware.WithBlobStorage(handler, settings.Azure)
-
-		user := createTestUser()
-		token, err := routes.GetJwt(
-			settings.Application.SigningKey,
-			settings.Application.TokenExpirationSeconds,
-			user.ID.String(),
-			user.Username,
-		)
-		if err != nil {
-			log.Fatalf("error creating test token: %s", err)
-		}
-
-		testApp = TestApp{
-			handler:  handler,
-			user:     user,
-			document: createTestDocument(user.ID),
-			token:    token,
-			settings: settings.Application,
-		}
 	})
 
-	return testApp
+	user := createTestUser()
+	token, err := routes.GetJwt(
+		settings.Application.SigningKey,
+		settings.Application.TokenExpirationSeconds,
+		user.ID.String(),
+		user.Username,
+	)
+	if err != nil {
+		log.Fatalf("error creating test token: %s", err)
+	}
+
+	return TestApp{
+		handler:  handler,
+		user:     user,
+		document: createTestDocument(user.ID),
+		token:    token,
+		settings: settings.Application,
+	}
 }
 
 func TestMain(m *testing.M) {
