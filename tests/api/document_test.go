@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 )
 
@@ -48,6 +49,69 @@ func TestCreateDocument(t *testing.T) {
 	if response.Name != documentName {
 		t.Errorf("output name mismatch; expected %v; got %v", documentName, response.Name)
 	}
+}
+
+func TestDeleteDocument(t *testing.T) {
+	testApp := GetTestApp()
+	testDocID := testApp.document.ID
+
+	t.Run("success response", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodDelete, "/document/"+testDocID.String(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Add("Authorization", "Bearer "+testApp.token)
+
+		rr := httptest.NewRecorder()
+		testApp.handler.ServeHTTP(rr, req)
+
+		status := rr.Result().StatusCode
+		if status != 202 {
+			t.Errorf("expected %d got %d", 202, rr.Result().StatusCode)
+		}
+	})
+
+	t.Run("document not found", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodDelete, "/document/"+uuid.New().String(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Add("Authorization", "Bearer "+testApp.token)
+
+		rr := httptest.NewRecorder()
+		testApp.handler.ServeHTTP(rr, req)
+
+		status := rr.Result().StatusCode
+		if status != 404 {
+			t.Errorf("expected %d got %d", 404, rr.Result().StatusCode)
+		}
+	})
+
+	t.Run("user is not owner", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodDelete, "/document/"+testDocID.String(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		otherUser := createTestUser()
+		token, err := routes.GetJwt(
+			settings.Application.SigningKey,
+			settings.Application.TokenExpirationSeconds,
+			otherUser.ID.String(),
+			otherUser.Username,
+		)
+		if err != nil {
+			t.Fatalf("error creating test token: %s", err)
+		}
+		req.Header.Add("Authorization", "Bearer "+token)
+
+		rr := httptest.NewRecorder()
+		testApp.handler.ServeHTTP(rr, req)
+
+		status := rr.Result().StatusCode
+		if status != 404 {
+			t.Errorf("expected %d got %d", 404, rr.Result().StatusCode)
+		}
+	})
 }
 
 func TestListDocuments(t *testing.T) {
