@@ -12,8 +12,12 @@ type Document struct {
 	ID          uuid.UUID
 	Name        string
 	OwnerID     uuid.UUID
-	SharedWith  []uuid.UUID
 	StateVector []byte
+}
+
+type DocumentContributor struct {
+	DocumentID uuid.UUID
+	UserID     uuid.UUID
 }
 
 type DocumentUpdate struct {

@@ -12,7 +12,7 @@ import (
 )
 
 const getDocumentByID = `-- name: GetDocumentByID :one
-SELECT id, name, owner_id, shared_with, state_vector FROM documents WHERE id = $1
+SELECT id, name, owner_id, state_vector FROM documents WHERE id = $1
 `
 
 func (q *Queries) GetDocumentByID(ctx context.Context, id uuid.UUID) (Document, error) {
@@ -22,7 +22,6 @@ func (q *Queries) GetDocumentByID(ctx context.Context, id uuid.UUID) (Document, 
 		&i.ID,
 		&i.Name,
 		&i.OwnerID,
-		&i.SharedWith,
 		&i.StateVector,
 	)
 	return i, err

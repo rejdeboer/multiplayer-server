@@ -11,18 +11,17 @@ import (
 	"github.com/google/uuid"
 )
 
-const addDocumentContributor = `-- name: AddDocumentContributor :exec
-UPDATE documents 
-SET shared_with = $2
-WHERE id = $1
+const createDocumentContributor = `-- name: CreateDocumentContributor :exec
+INSERT INTO document_contributors (document_id, user_id)
+VALUES ($1, $2)
 `
 
-type AddDocumentContributorParams struct {
-	ID         uuid.UUID
-	SharedWith []uuid.UUID
+type CreateDocumentContributorParams struct {
+	DocumentID uuid.UUID
+	UserID     uuid.UUID
 }
 
-func (q *Queries) AddDocumentContributor(ctx context.Context, arg AddDocumentContributorParams) error {
-	_, err := q.db.Exec(ctx, addDocumentContributor, arg.ID, arg.SharedWith)
+func (q *Queries) CreateDocumentContributor(ctx context.Context, arg CreateDocumentContributorParams) error {
+	_, err := q.db.Exec(ctx, createDocumentContributor, arg.DocumentID, arg.UserID)
 	return err
 }

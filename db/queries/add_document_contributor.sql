@@ -1,4 +1,3 @@
--- name: AddDocumentContributor :exec
-UPDATE documents 
-SET shared_with = $2
-WHERE id = $1;
+-- name: CreateDocumentContributor :exec
+INSERT INTO document_contributors (document_id, user_id)
+VALUES ($1, $2);
