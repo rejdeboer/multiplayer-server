@@ -1,4 +1,4 @@
-CREATE TABLE document_updates (
+CREATE TABLE IF NOT EXISTS document_updates (
     document_id uuid NOT NULL,
     clock integer NOT NULL,
     value bytea NOT NULL,
