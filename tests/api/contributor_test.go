@@ -1,9 +1,13 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/rejdeboer/multiplayer-server/internal/routes"
 )
 
 func TestCreateContributor(t *testing.T) {
@@ -11,9 +15,19 @@ func TestCreateContributor(t *testing.T) {
 	testDocID := testApp.document.ID
 
 	otherUser := createTestUser()
+	bodyBytes, err := json.Marshal(routes.DocumentContributorCreate{
+		UserID: otherUser.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	t.Run("success response", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPost, "/document/"+testDocID.String()+"/contributor/"+otherUser.ID.String(), nil)
+		req, err := http.NewRequest(
+			http.MethodPost,
+			"/document/"+testDocID.String()+"/contributor",
+			bytes.NewReader(bodyBytes),
+		)
 		if err != nil {
 			t.Fatal(err)
 		}

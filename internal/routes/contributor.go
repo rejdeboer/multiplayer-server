@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -10,19 +11,24 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type DocumentContributorCreate struct {
+	UserID uuid.UUID `json:"user_id"`
+}
+
 var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
-	pool := ctx.Value("pool").(*pgxpool.Pool)
-	q := db.New(pool)
-
-	contributorID, err := uuid.Parse(r.PathValue("user_id"))
+	var contributor DocumentContributorCreate
+	err := json.NewDecoder(r.Body).Decode(&contributor)
 	if err != nil {
-		httperrors.Write(w, "Invalid user id, please use uuid format", http.StatusBadRequest)
-		log.Error().Err(err).Msg("user used invalid user id format")
+		httperrors.Write(w, err.Error(), http.StatusBadRequest)
+		log.Error().Err(err).Msg("invalid body for create contributor")
 		return
 	}
+
+	pool := ctx.Value("pool").(*pgxpool.Pool)
+	q := db.New(pool)
 
 	docID, err := uuid.Parse(r.PathValue("document_id"))
 	if err != nil {
@@ -41,7 +47,7 @@ var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	*log = log.With().
 		Str("document_id", docID.String()).
 		Str("user_id", userID.String()).
-		Str("contributor_id", contributorID.String()).
+		Str("contributor_id", contributor.UserID.String()).
 		Logger()
 
 	_, err = getDocumentAsUser(ctx, docID, userID, q)
@@ -53,7 +59,7 @@ var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 
 	err = q.CreateDocumentContributor(ctx, db.CreateDocumentContributorParams{
 		DocumentID: docID,
-		UserID:     contributorID,
+		UserID:     contributor.UserID,
 	})
 	if err != nil {
 		httperrors.InternalServerError(w)

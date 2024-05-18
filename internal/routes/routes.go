@@ -22,7 +22,7 @@ func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 	mux.HandleFunc("DELETE /document/{id}", middleware.WithAuth(deleteDocument, settings.SigningKey))
 	mux.HandleFunc("POST /document", middleware.WithAuth(createDocument, settings.SigningKey))
 
-	mux.HandleFunc("POST /document/{document_id}/contributor/{user_id}", middleware.WithAuth(addContributor, settings.SigningKey))
+	mux.HandleFunc("POST /document/{document_id}/contributor", middleware.WithAuth(addContributor, settings.SigningKey))
 
 	mux.HandleFunc("POST /user", createUser)
 	mux.HandleFunc("POST /token", getToken(settings.SigningKey, settings.TokenExpirationSeconds))
