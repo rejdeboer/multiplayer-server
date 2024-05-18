@@ -253,6 +253,14 @@ func createTestDocument(ownerID uuid.UUID) routes.DocumentResponse {
 		log.Fatalf("error storing test document in db: %s", err)
 	}
 
+	err = q.CreateDocumentContributor(context.Background(), db.CreateDocumentContributorParams{
+		DocumentID: document.ID,
+		UserID:     ownerID,
+	})
+	if err != nil {
+		log.Fatalf("error storing owner as contributor in db: %s", err)
+	}
+
 	return routes.DocumentResponse{
 		ID:   document.ID,
 		Name: document.Name,

@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"slices"
 
@@ -17,11 +19,10 @@ type DocumentCreate struct {
 }
 
 type DocumentResponse struct {
-	ID          uuid.UUID   `json:"id"`
-	Name        string      `json:"name"`
-	OwnerID     uuid.UUID   `json:"ownerId"`
-	SharedWith  []uuid.UUID `json:"sharedWith"`
-	StateVector []byte      `json:"stateVector"`
+	ID           uuid.UUID   `json:"id"`
+	Name         string      `json:"name"`
+	OwnerID      uuid.UUID   `json:"ownerId"`
+	Contributors []uuid.UUID `json:"contributors"`
 }
 
 type DocumentListItem struct {
@@ -60,13 +61,27 @@ var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		log.Error().Err(err).Msg("failed to push document to db")
 		return
 	}
-	log.Info().Str("document_id", createdDocument.ID.String()).Msg("created new document")
+	*log = log.With().
+		Str("document_id", createdDocument.ID.String()).
+		Str("user_id", userID.String()).
+		Logger()
+	log.Info().Msg("created new document")
+
+	err = q.CreateDocumentContributor(ctx, db.CreateDocumentContributorParams{
+		DocumentID: createdDocument.ID,
+		UserID:     userID,
+	})
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error adding owner as contributor")
+		return
+	}
+	log.Info().Msg("added owner as contributor")
 
 	response, err := json.Marshal(DocumentResponse{
-		ID:         createdDocument.ID,
-		Name:       createdDocument.Name,
-		OwnerID:    createdDocument.OwnerID,
-		SharedWith: createdDocument.SharedWith,
+		ID:      createdDocument.ID,
+		Name:    createdDocument.Name,
+		OwnerID: createdDocument.OwnerID,
 	})
 	if err != nil {
 		httperrors.InternalServerError(w)
@@ -89,9 +104,6 @@ var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	pool := ctx.Value("pool").(*pgxpool.Pool)
-	q := db.New(pool)
-
 	userID, err := uuid.Parse(ctx.Value("user_id").(string))
 	if err != nil {
 		httperrors.InternalServerError(w)
@@ -99,16 +111,24 @@ var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	document, err := q.GetDocumentByID(ctx, docID)
+	*log = log.With().
+		Str("document_id", docID.String()).
+		Str("user_id", userID.String()).
+		Logger()
+
+	pool := ctx.Value("pool").(*pgxpool.Pool)
+	q := db.New(pool)
+
+	document, err := q.GetDocumnetByID(ctx, docID)
 	if err != nil {
 		httperrors.Write(w, "Document not found", http.StatusNotFound)
-		log.Error().Err(err).Str("document_id", docID.String()).Msg("document not found")
+		log.Error().Err(err).Msg("document not found")
 		return
 	}
 
 	if document.OwnerID != userID {
 		httperrors.Write(w, "Document not found", http.StatusNotFound)
-		log.Error().Err(err).Str("document_id", docID.String()).Msg("user has no right to delete document")
+		log.Error().Err(err).Msg("user has no right to delete document")
 		return
 	}
 
@@ -118,7 +138,7 @@ var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		log.Error().Err(err).Msg("failed to delete document")
 		return
 	}
-	log.Info().Str("document_id", docID.String()).Msg("deleted document")
+	log.Info().Msg("deleted document")
 
 	w.WriteHeader(http.StatusAccepted)
 })
@@ -185,26 +205,14 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	document, err := q.GetDocumentByID(ctx, docID)
+	document, err := getDocumentAsUser(ctx, docID, userID, q)
 	if err != nil {
+		log.Error().Err(err).Msg("error fetching document")
 		httperrors.Write(w, "Document not found", http.StatusNotFound)
-		log.Error().Err(err).Str("document_id", docID.String()).Msg("document not found")
 		return
 	}
 
-	if document.OwnerID != userID && !slices.Contains(document.SharedWith, userID) {
-		httperrors.Write(w, "Document not found", http.StatusNotFound)
-		log.Error().Err(err).Str("document_id", docID.String()).Msg("user has no access rights")
-		return
-	}
-
-	response, err := json.Marshal(DocumentResponse{
-		ID:          docID,
-		OwnerID:     userID,
-		Name:        document.Name,
-		SharedWith:  document.SharedWith,
-		StateVector: document.StateVector,
-	})
+	response, err := json.Marshal(document)
 	if err != nil {
 		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("error marshalling response")
@@ -215,3 +223,31 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 })
+
+func getDocumentAsUser(
+	ctx context.Context,
+	docID uuid.UUID,
+	userID uuid.UUID,
+	q *db.Queries,
+) (DocumentResponse, error) {
+	rows, err := q.GetDocumentWithContributorsByID(ctx, docID)
+	if err != nil {
+		return DocumentResponse{}, err
+	}
+
+	var contributors []uuid.UUID
+	for _, row := range rows {
+		contributors = append(contributors, row.ContributorID)
+	}
+
+	if !slices.Contains(contributors, userID) {
+		return DocumentResponse{}, errors.New("user does not have access rights")
+	}
+
+	return DocumentResponse{
+		ID:           rows[0].ID,
+		OwnerID:      rows[0].OwnerID,
+		Name:         rows[0].Name,
+		Contributors: contributors,
+	}, nil
+}

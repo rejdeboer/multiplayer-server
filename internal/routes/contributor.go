@@ -2,7 +2,6 @@ package routes
 
 import (
 	"net/http"
-	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,14 +17,14 @@ var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	pool := ctx.Value("pool").(*pgxpool.Pool)
 	q := db.New(pool)
 
-	contributorID, err := uuid.Parse(r.PathValue("user-id"))
+	contributorID, err := uuid.Parse(r.PathValue("user_id"))
 	if err != nil {
 		httperrors.Write(w, "Invalid user id, please use uuid format", http.StatusBadRequest)
 		log.Error().Err(err).Msg("user used invalid user id format")
 		return
 	}
 
-	docID, err := uuid.Parse(r.PathValue("document-id"))
+	docID, err := uuid.Parse(r.PathValue("document_id"))
 	if err != nil {
 		httperrors.Write(w, "Invalid document id, please use uuid format", http.StatusBadRequest)
 		log.Error().Err(err).Msg("user used invalid document id format")
@@ -45,29 +44,16 @@ var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		Str("contributor_id", contributorID.String()).
 		Logger()
 
-	document, err := q.GetDocumentByID(ctx, docID)
+	_, err = getDocumentAsUser(ctx, docID, userID, q)
 	if err != nil {
+		log.Error().Err(err).Msg("error fetching document")
 		httperrors.Write(w, "Document not found", http.StatusNotFound)
-		log.Error().Err(err).Msg("document not found")
 		return
 	}
 
-	if document.OwnerID != userID {
-		httperrors.Write(w, "Document not found", http.StatusNotFound)
-		log.Error().Err(err).
-			Msg("user is not allowed to add contributor")
-		return
-	}
-
-	if slices.Contains(document.SharedWith, contributorID) {
-		httperrors.Write(w, "User is already a contributor", http.StatusBadRequest)
-		log.Error().Err(err).Msg("user is already a contributor")
-		return
-	}
-
-	err = q.AddDocumentContributor(ctx, db.AddDocumentContributorParams{
-		ID:         docID,
-		SharedWith: append(document.SharedWith, contributorID),
+	err = q.CreateDocumentContributor(ctx, db.CreateDocumentContributorParams{
+		DocumentID: docID,
+		UserID:     contributorID,
 	})
 	if err != nil {
 		httperrors.InternalServerError(w)
