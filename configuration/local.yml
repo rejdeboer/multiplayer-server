@@ -2,6 +2,7 @@ application:
   signing_key: secret
 database:
   require_ssl: false
+  kafka_endpoint: http://localhost:29092
 azure:
   blob_connection_string: DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://azurite:10000/devstoreaccount1;
   storage_account_name: devstoreaccount1
