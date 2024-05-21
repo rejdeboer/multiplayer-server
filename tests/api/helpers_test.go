@@ -23,6 +23,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"github.com/rejdeboer/multiplayer-server/internal/application"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
@@ -66,6 +67,7 @@ func GetTestApp() TestApp {
 		handler = routes.CreateHandler(settings, &routes.Env{
 			Pool:     dbpool,
 			Producer: producer,
+			Blob:     application.GetBlobClient(settings.Azure),
 		})
 	})
 

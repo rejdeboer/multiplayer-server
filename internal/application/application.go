@@ -37,6 +37,7 @@ func Build(settings configuration.Settings) Application {
 	handler := routes.CreateHandler(settings, &routes.Env{
 		Pool:     pool,
 		Producer: producer,
+		Blob:     GetBlobClient(settings.Azure),
 	})
 
 	return Application{

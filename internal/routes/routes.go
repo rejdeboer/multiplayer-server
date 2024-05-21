@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
@@ -14,6 +15,7 @@ import (
 type Env struct {
 	Pool     *pgxpool.Pool
 	Producer *kafka.Producer
+	Blob     *azblob.Client
 }
 
 func CreateHandler(settings configuration.Settings, env *Env) http.Handler {
@@ -37,7 +39,6 @@ func CreateHandler(settings configuration.Settings, env *Env) http.Handler {
 	mux.HandleFunc("POST /token", env.getToken(settings.Application.SigningKey, settings.Application.TokenExpirationSeconds))
 
 	handler := middleware.WithLogging(mux)
-	handler = middleware.WithBlobStorage(handler, settings.Azure)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},

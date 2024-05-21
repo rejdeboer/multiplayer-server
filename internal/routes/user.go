@@ -9,7 +9,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/google/uuid"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
@@ -83,8 +82,7 @@ func (env *Env) createUser(w http.ResponseWriter, r *http.Request) {
 	userID := createdUser.ID.String()
 	log.Info().Str("user_id", userID).Msg("created new user")
 
-	blob_client := ctx.Value("azblob").(*azblob.Client)
-	_, err = blob_client.CreateContainer(ctx, userID, nil)
+	_, err = env.Blob.CreateContainer(ctx, userID, nil)
 	if err != nil {
 		httperrors.InternalServerError(w)
 		log.Error().Err(err).Str("user_id", userID).Msg("failed to create blob container")
