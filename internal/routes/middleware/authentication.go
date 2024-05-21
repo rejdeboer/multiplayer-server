@@ -10,41 +10,43 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func WithAuth(next http.Handler, signingKey string) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		log := zerolog.Ctx(ctx)
+func WithAuth(signingKey string) func(http.Handler) http.HandlerFunc {
+	return func(next http.Handler) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			log := zerolog.Ctx(ctx)
 
-		authHeader := r.Header["Authorization"]
-		if authHeader == nil || len(authHeader) == 0 {
-			httperrors.Write(w, "please provide an 'Authorization' header", http.StatusUnauthorized)
-			log.Error().Msg("received request without auth header")
-			return
-		}
+			authHeader := r.Header["Authorization"]
+			if authHeader == nil || len(authHeader) == 0 {
+				httperrors.Write(w, "please provide an 'Authorization' header", http.StatusUnauthorized)
+				log.Error().Msg("received request without auth header")
+				return
+			}
 
-		authHeaderParts := strings.Split(authHeader[0], " ")
-		if len(authHeaderParts) != 2 || authHeaderParts[0] != "Bearer" {
-			httperrors.Write(w, "please provide a valid bearer token in the auth header", http.StatusUnauthorized)
-			log.Error().Str("header", authHeader[0]).Msg("malformed auth header")
-			return
-		}
+			authHeaderParts := strings.Split(authHeader[0], " ")
+			if len(authHeaderParts) != 2 || authHeaderParts[0] != "Bearer" {
+				httperrors.Write(w, "please provide a valid bearer token in the auth header", http.StatusUnauthorized)
+				log.Error().Str("header", authHeader[0]).Msg("malformed auth header")
+				return
+			}
 
-		token := authHeaderParts[1]
-		claims, err := verifyAndGetClaims(token, signingKey)
-		if err != nil {
-			httperrors.Write(w, "invalid jwt token", http.StatusUnauthorized)
-			log.Error().Err(err).Msg("invalid jwt token")
-			return
-		}
+			token := authHeaderParts[1]
+			claims, err := verifyAndGetClaims(token, signingKey)
+			if err != nil {
+				httperrors.Write(w, "invalid jwt token", http.StatusUnauthorized)
+				log.Error().Err(err).Msg("invalid jwt token")
+				return
+			}
 
-		userID := claims["user_id"].(string)
-		ctx = context.WithValue(ctx, "user_id", userID)
-		*log = log.With().
-			Str("user_id", userID).
-			Logger()
+			userID := claims["user_id"].(string)
+			ctx = context.WithValue(ctx, "user_id", userID)
+			*log = log.With().
+				Str("user_id", userID).
+				Logger()
 
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 func verifyAndGetClaims(token string, verificationSecret string) (jwt.MapClaims, error) {

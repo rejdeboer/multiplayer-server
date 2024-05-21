@@ -9,6 +9,8 @@ import (
 )
 
 func NewRouter(settings configuration.ApplicationSettings) http.Handler {
+	authorized := middleware.WithAuth(settings.SigningKey)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -17,12 +19,12 @@ func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	mux.HandleFunc("GET /document", middleware.WithAuth(listDocuments, settings.SigningKey))
-	mux.HandleFunc("GET /document/{id}", middleware.WithAuth(getDocument, settings.SigningKey))
-	mux.HandleFunc("DELETE /document/{id}", middleware.WithAuth(deleteDocument, settings.SigningKey))
-	mux.HandleFunc("POST /document", middleware.WithAuth(createDocument, settings.SigningKey))
+	mux.HandleFunc("GET /document", authorized(listDocuments))
+	mux.HandleFunc("GET /document/{id}", authorized(getDocument))
+	mux.HandleFunc("DELETE /document/{id}", authorized(deleteDocument))
+	mux.HandleFunc("POST /document", authorized(createDocument))
 
-	mux.HandleFunc("POST /document/{document_id}/contributor", middleware.WithAuth(addContributor, settings.SigningKey))
+	mux.HandleFunc("POST /document/{document_id}/contributor", authorized(addContributor))
 
 	mux.HandleFunc("POST /user", createUser)
 	mux.HandleFunc("POST /token", getToken(settings.SigningKey, settings.TokenExpirationSeconds))
