@@ -3,12 +3,13 @@ package routes
 import (
 	"net/http"
 
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/routes/middleware"
 	"github.com/rs/zerolog"
 )
 
-func NewRouter(settings configuration.ApplicationSettings) http.Handler {
+func NewRouter(settings configuration.ApplicationSettings, producer *kafka.Producer) http.Handler {
 	authorized := middleware.WithAuth(settings.SigningKey)
 
 	mux := http.NewServeMux()
@@ -26,7 +27,7 @@ func NewRouter(settings configuration.ApplicationSettings) http.Handler {
 
 	mux.HandleFunc("POST /document/{document_id}/contributor", authorized(addContributor))
 
-	mux.HandleFunc("POST /user", createUser)
+	mux.HandleFunc("POST /user", createUser(producer))
 	mux.HandleFunc("POST /token", getToken(settings.SigningKey, settings.TokenExpirationSeconds))
 
 	return mux

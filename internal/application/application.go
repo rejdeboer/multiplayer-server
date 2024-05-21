@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
@@ -36,7 +36,7 @@ func Build(settings configuration.Settings) Application {
 		log.Fatal().Err(err).Msg("error creating kafka producer")
 	}
 
-	handler := createHandler(settings, pool)
+	handler := createHandler(settings, pool, producer)
 
 	return Application{
 		addr:     addr,
@@ -57,8 +57,8 @@ func (app *Application) close() {
 	app.producer.Close()
 }
 
-func createHandler(settings configuration.Settings, pool *pgxpool.Pool) http.Handler {
-	handler := routes.NewRouter(settings.Application)
+func createHandler(settings configuration.Settings, pool *pgxpool.Pool, producer *kafka.Producer) http.Handler {
+	handler := routes.NewRouter(settings.Application, producer)
 	handler = middleware.WithLogging(handler)
 	handler = middleware.WithDb(handler, pool)
 	handler = middleware.WithBlobStorage(handler, settings.Azure)
