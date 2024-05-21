@@ -51,11 +51,14 @@ services:
       - POSTGRES_DB=multiplayer
 
   elasticsearch:
+    hostname: elasticsearch
     container_name: elastic
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     ports:
       - '9200:9200'
       - '9300:9300'
+    expose:
+      - '9200'
     environment:
       - xpack.security.enabled=false
       - discovery.type=single-node
@@ -66,6 +69,27 @@ services:
       memlock:
         soft: -1
         hard: -1
+
+  init-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    depends_on:
+      - elasticsearch
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+        until curl -sS 'http://elasticsearch:9200/_cat/health?h=status' | grep -q 'green\|yellow'; do
+          sleep 1
+        done
+        curl -X PUT 'http://elasticsearch:9200/users' -H 'Content-Type: application/json' -d'
+        {
+          "mappings": {
+            "properties": {
+              "name": { "type": "text" },
+              "quantity": { "type": "integer" }
+            }
+          }
+        }'
+      "
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
