@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 	"github.com/rs/zerolog"
@@ -30,7 +29,7 @@ type DocumentListItem struct {
 	Name string    `json:"name"`
 }
 
-var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (env *Env) createDocument(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
@@ -42,8 +41,7 @@ var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	pool := ctx.Value("pool").(*pgxpool.Pool)
-	q := db.New(pool)
+	q := db.New(env.Pool)
 
 	userID, err := uuid.Parse(ctx.Value("user_id").(string))
 	if err != nil {
@@ -91,9 +89,9 @@ var createDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
-})
+}
 
-var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (env *Env) deleteDocument(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
@@ -116,8 +114,7 @@ var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		Str("user_id", userID.String()).
 		Logger()
 
-	pool := ctx.Value("pool").(*pgxpool.Pool)
-	q := db.New(pool)
+	q := db.New(env.Pool)
 
 	document, err := q.GetDocumnetByID(ctx, docID)
 	if err != nil {
@@ -141,14 +138,13 @@ var deleteDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	log.Info().Msg("deleted document")
 
 	w.WriteHeader(http.StatusAccepted)
-})
+}
 
-var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (env *Env) listDocuments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
-	pool := ctx.Value("pool").(*pgxpool.Pool)
-	q := db.New(pool)
+	q := db.New(env.Pool)
 
 	userID, err := uuid.Parse(ctx.Value("user_id").(string))
 	if err != nil {
@@ -182,14 +178,13 @@ var listDocuments = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 	log.Info().Int("items", len(documents)).Msg("sending document list")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
-})
+}
 
-var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (env *Env) getDocument(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
-	pool := ctx.Value("pool").(*pgxpool.Pool)
-	q := db.New(pool)
+	q := db.New(env.Pool)
 
 	docID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
@@ -222,7 +217,7 @@ var getDocument = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	log.Info().Str("document_id", docID.String()).Msg("sending document")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
-})
+}
 
 func getDocumentAsUser(
 	ctx context.Context,

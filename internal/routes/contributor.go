@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 	"github.com/rs/zerolog"
@@ -15,7 +14,7 @@ type DocumentContributorCreate struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (env *Env) addDocumentContributor(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zerolog.Ctx(ctx)
 
@@ -27,8 +26,7 @@ var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	pool := ctx.Value("pool").(*pgxpool.Pool)
-	q := db.New(pool)
+	q := db.New(env.Pool)
 
 	docID, err := uuid.Parse(r.PathValue("document_id"))
 	if err != nil {
@@ -68,4 +66,4 @@ var addContributor = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 
 	log.Info().Msg("added contributor")
 	w.WriteHeader(http.StatusAccepted)
-})
+}

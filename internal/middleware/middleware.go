@@ -7,7 +7,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
 	"github.com/rs/zerolog/hlog"
@@ -30,13 +29,6 @@ func WithLogging(next http.Handler) http.Handler {
 	requestIdHandler := hlog.RequestIDHandler("req_id", "Request-Id")
 
 	return hlogHandler(accessHandler(userAgentHandler(requestIdHandler(next))))
-}
-
-func WithDb(next http.Handler, pool *pgxpool.Pool) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithValue(r.Context(), "pool", pool)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
 }
 
 func WithBlobStorage(next http.Handler, settings configuration.AzureSettings) http.Handler {

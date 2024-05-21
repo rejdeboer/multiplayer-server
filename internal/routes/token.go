@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 	"github.com/rs/zerolog"
@@ -23,7 +22,7 @@ type TokenResponse struct {
 	ExpiresInSeconds uint16 `json:"expiresInSeconds"`
 }
 
-func getToken(signingKey string, tokenExpirationSeconds uint16) http.HandlerFunc {
+func (env *Env) getToken(signingKey string, tokenExpirationSeconds uint16) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := zerolog.Ctx(ctx)
@@ -36,8 +35,7 @@ func getToken(signingKey string, tokenExpirationSeconds uint16) http.HandlerFunc
 			return
 		}
 
-		pool := ctx.Value("pool").(*pgxpool.Pool)
-		q := db.New(pool)
+		q := db.New(env.Pool)
 
 		user, err := q.GetUserByEmail(ctx, credentials.Email)
 		if err != nil {

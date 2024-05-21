@@ -10,8 +10,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func WithAuth(signingKey string) func(http.Handler) http.HandlerFunc {
-	return func(next http.Handler) http.HandlerFunc {
+func WithAuth(signingKey string) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			log := zerolog.Ctx(ctx)

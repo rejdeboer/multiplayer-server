@@ -9,9 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
-	"github.com/rejdeboer/multiplayer-server/internal/middleware"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
-	"github.com/rs/cors"
 )
 
 var log = logger.Get()
@@ -36,7 +34,10 @@ func Build(settings configuration.Settings) Application {
 		log.Fatal().Err(err).Msg("error creating kafka producer")
 	}
 
-	handler := createHandler(settings, pool, producer)
+	handler := routes.CreateHandler(settings, &routes.Env{
+		Pool:     pool,
+		Producer: producer,
+	})
 
 	return Application{
 		addr:     addr,
@@ -55,24 +56,6 @@ func (app *Application) Start() error {
 func (app *Application) close() {
 	app.pool.Close()
 	app.producer.Close()
-}
-
-func createHandler(settings configuration.Settings, pool *pgxpool.Pool, producer *kafka.Producer) http.Handler {
-	handler := routes.NewRouter(settings.Application, producer)
-	handler = middleware.WithLogging(handler)
-	handler = middleware.WithDb(handler, pool)
-	handler = middleware.WithBlobStorage(handler, settings.Azure)
-
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
-		AllowedHeaders:   []string{"*"},
-		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions},
-		AllowCredentials: true,
-	})
-
-	handler = c.Handler(handler)
-
-	return handler
 }
 
 func getDbConnectionPool(settings configuration.DatabaseSettings) *pgxpool.Pool {

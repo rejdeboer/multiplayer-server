@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -24,7 +25,6 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
-	"github.com/rejdeboer/multiplayer-server/internal/middleware"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -56,10 +56,17 @@ func GetTestApp() TestApp {
 		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "https", "http")
 		settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "azurite:10000", blobHostAndPort)
 
-		handler = routes.NewRouter(settings.Application, nil)
-		handler = middleware.WithLogging(handler)
-		handler = middleware.WithDb(handler, dbpool)
-		handler = middleware.WithBlobStorage(handler, settings.Azure)
+		producer, err := kafka.NewProducer(&kafka.ConfigMap{
+			"bootstrap.servers": settings.Application.KafkaEndpoint,
+		})
+		if err != nil {
+			log.Fatalf("error creating kafka producer")
+		}
+
+		handler = routes.CreateHandler(settings, &routes.Env{
+			Pool:     dbpool,
+			Producer: producer,
+		})
 	})
 
 	user := createTestUser()
