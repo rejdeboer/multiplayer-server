@@ -18,9 +18,11 @@ curl -X PUT 'http://localhost:9200/users' -H 'Content-Type: application/json' -d
   }
 }'
 
-
 # blocks until kafka is reachable
 kafka-topics --bootstrap-server localhost:9092 --list
+
+# Can be used to delete elasticsearch connector
+# curl -X DELETE http://localhost:8083/connectors/elasticsearch-sink
 
 curl -X POST http://localhost:8083/connectors -H 'Content-Type: application/json' -d \
 '{
