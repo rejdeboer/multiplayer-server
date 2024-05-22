@@ -29,7 +29,7 @@ type UserResponse struct {
 	Username string    `json:"username"`
 }
 
-const USER_CREATED_TOPIC string = "user-created"
+const USERS_TOPIC string = "users"
 
 func (env *Env) createUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -101,9 +101,10 @@ func (env *Env) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	topic := USER_CREATED_TOPIC
+	topic := USERS_TOPIC
 	env.Producer.Produce(&kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+		Key:            []byte(createdUser.ID.String()),
 		Value:          body,
 	}, nil)
 
