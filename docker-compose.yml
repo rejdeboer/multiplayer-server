@@ -51,45 +51,21 @@ services:
       - POSTGRES_DB=multiplayer
 
   elasticsearch:
-    hostname: elasticsearch
     container_name: elastic
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     ports:
       - '9200:9200'
       - '9300:9300'
-    expose:
-      - '9200'
     environment:
       - xpack.security.enabled=false
       - discovery.type=single-node
-      - bootstrap.memory_lock=true
+      # - bootstrap.memory_lock=true
       - 'ES_JAVA_OPTS=-Xms512m -Xmx512m'
-      - cluster.routing.allocation.disk.threshold_enabled=false
+      # - cluster.routing.allocation.disk.threshold_enabled=false
     ulimits:
       memlock:
         soft: -1
         hard: -1
-
-  init-elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    depends_on:
-      - elasticsearch
-    entrypoint: [ '/bin/sh', '-c' ]
-    command: |
-      "
-        until curl -sS 'http://elasticsearch:9200/_cat/health?h=status' | grep -q 'green\|yellow'; do
-          sleep 1
-        done
-        curl -X PUT 'http://elasticsearch:9200/users' -H 'Content-Type: application/json' -d'
-        {
-          "mappings": {
-            "properties": {
-              "name": { "type": "text" },
-              "quantity": { "type": "integer" }
-            }
-          }
-        }'
-      "
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
@@ -147,8 +123,15 @@ services:
       - zookeeper
       - kafka
       - elasticsearch
-    volumes:
-      - $PWD/connect-plugins:/connect-plugins
+    command:
+      - bash
+      - -c
+      - |
+        echo "Installing Connector"
+        confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:14.0.16
+        echo "Launching Kafka Connect worker"
+        /etc/confluent/docker/run &
+        sleep infinity
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
       CONNECT_REST_PORT: 8083
@@ -172,8 +155,6 @@ services:
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor'
       CONNECT_REST_ADVERTISED_HOST_NAME: 'connect'
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
-      # CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
-      CONNECT_PLUGIN_PATH: /connect-plugins
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
