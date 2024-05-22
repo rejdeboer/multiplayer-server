@@ -15,6 +15,7 @@ import (
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -64,10 +65,18 @@ func GetTestApp() TestApp {
 			log.Fatalf("error creating kafka producer")
 		}
 
+		searchClient, err := elasticsearch.NewTypedClient(elasticsearch.Config{
+			Addresses: []string{settings.Application.ElasticsearchEndpoint},
+		})
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+
 		handler = routes.CreateHandler(settings, &routes.Env{
-			Pool:     dbpool,
-			Producer: producer,
-			Blob:     application.GetBlobClient(settings.Azure),
+			Pool:         dbpool,
+			Producer:     producer,
+			Blob:         application.GetBlobClient(settings.Azure),
+			SearchClient: searchClient,
 		})
 	})
 

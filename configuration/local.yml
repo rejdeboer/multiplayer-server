@@ -1,6 +1,7 @@
 application:
   signing_key: secret
   kafka_endpoint: kafka:29092
+  elasticsearch_endpoint: http://elastic:9200
 database:
   require_ssl: false
 azure:

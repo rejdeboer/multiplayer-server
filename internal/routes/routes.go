@@ -5,6 +5,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/middleware"
@@ -13,9 +14,10 @@ import (
 )
 
 type Env struct {
-	Pool     *pgxpool.Pool
-	Producer *kafka.Producer
-	Blob     *azblob.Client
+	Pool         *pgxpool.Pool
+	Producer     *kafka.Producer
+	Blob         *azblob.Client
+	SearchClient *elasticsearch.TypedClient
 }
 
 func CreateHandler(settings configuration.Settings, env *Env) http.Handler {

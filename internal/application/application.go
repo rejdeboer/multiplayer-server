@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
@@ -34,10 +35,18 @@ func Build(settings configuration.Settings) Application {
 		log.Fatal().Err(err).Msg("error creating kafka producer")
 	}
 
+	searchClient, err := elasticsearch.NewTypedClient(elasticsearch.Config{
+		Addresses: []string{settings.Application.ElasticsearchEndpoint},
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("error creating elasticsearch client")
+	}
+
 	handler := routes.CreateHandler(settings, &routes.Env{
-		Pool:     pool,
-		Producer: producer,
-		Blob:     GetBlobClient(settings.Azure),
+		Pool:         pool,
+		Producer:     producer,
+		Blob:         GetBlobClient(settings.Azure),
+		SearchClient: searchClient,
 	})
 
 	return Application{
