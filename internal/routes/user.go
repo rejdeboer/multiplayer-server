@@ -10,6 +10,8 @@ import (
 	"unicode"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/google/uuid"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
@@ -24,6 +26,12 @@ type UserCreate struct {
 }
 
 type UserResponse struct {
+	ID       uuid.UUID `json:"id"`
+	Email    string    `json:"email"`
+	Username string    `json:"username"`
+}
+
+type UserListItem struct {
 	ID       uuid.UUID `json:"id"`
 	Email    string    `json:"email"`
 	Username string    `json:"username"`
@@ -110,6 +118,48 @@ func (env *Env) createUser(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
+}
+
+func (env *Env) searchUsers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := zerolog.Ctx(ctx)
+
+	query := r.URL.Query().Get("query")
+
+	result, err := env.SearchClient.Search().
+		Index("users").
+		Request(&search.Request{
+			Query: &types.Query{MultiMatch: &types.MultiMatchQuery{
+				Query: query,
+			}},
+		}).Do(ctx)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error searching users")
+		return
+	}
+
+	var users []UserListItem
+	for _, hit := range result.Hits.Hits {
+		var user UserListItem
+		err = json.Unmarshal(hit.Source_, &user)
+		if err != nil {
+			httperrors.InternalServerError(w)
+			log.Error().Err(err).Msg("error unmarshalling search hit")
+			return
+		}
+		users = append(users, user)
+	}
+
+	response, err := json.Marshal(users)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error marshalling response")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
 }
 
 func hashPassword(password string) (string, error) {
