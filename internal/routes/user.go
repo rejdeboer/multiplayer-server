@@ -139,7 +139,7 @@ func (env *Env) searchUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var users []UserListItem
+	users := []UserListItem{}
 	for _, hit := range result.Hits.Hits {
 		var user UserListItem
 		err = json.Unmarshal(hit.Source_, &user)
