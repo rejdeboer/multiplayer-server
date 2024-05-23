@@ -11,7 +11,7 @@ import (
 )
 
 type DocumentContributorCreate struct {
-	UserID uuid.UUID `json:"user_id"`
+	UserID uuid.UUID `json:"userId"`
 }
 
 func (env *Env) addDocumentContributor(w http.ResponseWriter, r *http.Request) {
