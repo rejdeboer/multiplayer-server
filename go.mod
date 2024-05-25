@@ -8,6 +8,7 @@ require (
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/confluentinc/confluent-kafka-go/v2 v2.4.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/elastic/go-elasticsearch/v8 v8.13.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-migrate/migrate/v4 v4.17.0
 	github.com/google/uuid v1.6.0
@@ -29,14 +30,12 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
 	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/docker/cli v25.0.1+incompatible // indirect
 	github.com/docker/docker v25.0.3+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.5.0 // indirect
-	github.com/elastic/go-elasticsearch/v8 v8.13.1 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
