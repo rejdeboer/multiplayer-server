@@ -11,6 +11,8 @@ on:
       - "cmd/**"
       - "configuration/**"
       - "Dockerfile"
+      - "go.mod"
+      - "go.sum"
   workflow_dispatch:
 
 env:
