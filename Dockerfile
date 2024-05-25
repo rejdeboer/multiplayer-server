@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY ./ ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./tmp/main ./cmd/multiplayer-server/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -o ./tmp/main ./cmd/multiplayer-server/main.go
 
 FROM golang:1.22.1-alpine AS build-release-stage
 
