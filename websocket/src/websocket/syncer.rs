@@ -216,7 +216,7 @@ impl Syncer {
 async fn compute_diff(state_vector: Vec<u8>, document_id: Uuid, pool: PgPool) -> Vec<u8> {
     let encoded_updates = get_document_updates(document_id, pool).await;
 
-    if encoded_updates.len() == 0 {
+    if encoded_updates.is_empty() {
         return vec![];
     }
 
