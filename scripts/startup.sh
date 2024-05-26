@@ -6,7 +6,7 @@ until curl -sS 'http://localhost:9200/_cat/health?h=status' | grep -q 'green\|ye
   sleep 1
 done
 
-# Create Elasticsearch topic
+# Create Elasticsearch index
 curl -X PUT 'http://localhost:9200/users' -H 'Content-Type: application/json' -d'
 {
   "mappings": {

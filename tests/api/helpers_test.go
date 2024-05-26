@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -36,6 +38,7 @@ var settings configuration.Settings
 var handler http.Handler
 var dbpool *pgxpool.Pool
 var blobHostAndPort string
+var elasticsearchEndpoint string
 
 type TestApp struct {
 	handler  http.Handler
@@ -66,7 +69,7 @@ func GetTestApp() TestApp {
 		}
 
 		searchClient, err := elasticsearch.NewTypedClient(elasticsearch.Config{
-			Addresses: []string{settings.Application.ElasticsearchEndpoint},
+			Addresses: []string{elasticsearchEndpoint},
 		})
 		if err != nil {
 			log.Fatalf(err.Error())
@@ -104,6 +107,9 @@ func TestMain(m *testing.M) {
 	dockerPool := initDocker()
 
 	postgresContainer := createPostgresContainer(dockerPool)
+	azuriteContainer := createAzuriteContainer(dockerPool)
+	elasticsearchContainer := createElasticsearchContainer(dockerPool)
+
 	databaseHostAndPort := postgresContainer.GetHostPort("5432/tcp")
 	databaseUrl := fmt.Sprintf("postgres://postgres:postgres@%s/multiplayer?sslmode=disable", databaseHostAndPort)
 
@@ -113,10 +119,14 @@ func TestMain(m *testing.M) {
 
 	startMigration(databaseUrl)
 
-	azuriteContainer := createAzuriteContainer(dockerPool)
 	blobHostAndPort = azuriteContainer.GetHostPort("10000/tcp")
 	if err := dockerPool.Retry(waitAzuriteContainerToBeReady(blobHostAndPort)); err != nil {
 		log.Fatalf("azurite container not intialized: %s", err)
+	}
+
+	elasticsearchEndpoint = "http://" + elasticsearchContainer.GetHostPort("9200/tcp")
+	if err := dockerPool.Retry(waitElasticsearchContainerToBeReady(elasticsearchEndpoint + "/_cat/healt?h=status")); err != nil {
+		log.Fatalf("elasticsearch container not intialized: %s", err)
 	}
 
 	code := m.Run()
@@ -173,15 +183,33 @@ func createAzuriteContainer(dockerPool *dockertest.Pool) *dockertest.Resource {
 	container, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "mcr.microsoft.com/azure-storage/azurite",
 		Tag:        "latest",
+	}, func(config *docker.HostConfig) {
+		config.AutoRemove = true
+		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
+	})
+	if err != nil {
+		log.Fatalf("could not start azurite: %s", err)
+	}
+
+	container.Expire(120)
+	return container
+}
+
+func createElasticsearchContainer(dockerPool *dockertest.Pool) *dockertest.Resource {
+	container, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "elasticsearch",
+		Tag:        "8.13.4",
 		Env: []string{
-			"listen_addresses = '*'",
+			"xpack.security.enabled=false",
+			"discovery.type=single-node",
+			"ES_JAVA_OPTS=-Xms512m -Xmx512m",
 		},
 	}, func(config *docker.HostConfig) {
 		config.AutoRemove = true
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
 	})
 	if err != nil {
-		log.Fatalf("could not start postgres: %s", err)
+		log.Fatalf("could not start elasticsearch: %s", err)
 	}
 
 	container.Expire(120)
@@ -205,6 +233,28 @@ func waitAzuriteContainerToBeReady(address string) func() error {
 	return func() error {
 		_, err := net.Dial("tcp", address)
 		return err
+	}
+}
+
+func waitElasticsearchContainerToBeReady(url string) func() error {
+	return func() error {
+		res, err := http.Get(url)
+		if err != nil {
+			fmt.Println(err.Error())
+			return err
+		}
+		defer res.Body.Close()
+
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+
+		if !strings.Contains(string(bodyBytes), "yellow") || !strings.Contains(string(bodyBytes), "green") {
+			return errors.New("elasticsearch is not ready yet")
+		}
+
+		return nil
 	}
 }
 
