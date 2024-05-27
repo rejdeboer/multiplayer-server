@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -94,6 +95,8 @@ func GetTestApp() TestApp {
 		log.Fatalf("error creating test token: %s", err)
 	}
 
+	// addUserToElasticsearch(handler., user)
+
 	return TestApp{
 		handler:  handler,
 		user:     user,
@@ -137,6 +140,10 @@ func TestMain(m *testing.M) {
 
 	if err := dockerPool.Purge(azuriteContainer); err != nil {
 		log.Fatalf("could not purge azurite: %s", err)
+	}
+
+	if err := dockerPool.Purge(elasticsearchContainer); err != nil {
+		log.Fatalf("could not purge elasticsearch: %s", err)
 	}
 
 	os.Exit(code)
@@ -197,7 +204,7 @@ func createAzuriteContainer(dockerPool *dockertest.Pool) *dockertest.Resource {
 
 func createElasticsearchContainer(dockerPool *dockertest.Pool) *dockertest.Resource {
 	container, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "elasticsearch",
+		Repository: "docker.elastic.co/elasticsearch/elasticsearch",
 		Tag:        "8.13.4",
 		Env: []string{
 			"xpack.security.enabled=false",
@@ -238,7 +245,7 @@ func waitAzuriteContainerToBeReady(address string) func() error {
 
 func waitElasticsearchContainerToBeReady(url string) func() error {
 	return func() error {
-		res, err := http.Get(url)
+		res, err := http.Post(url, "application/json", bytes.NewReader(nil))
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
@@ -251,6 +258,7 @@ func waitElasticsearchContainerToBeReady(url string) func() error {
 		}
 
 		if !strings.Contains(string(bodyBytes), "yellow") || !strings.Contains(string(bodyBytes), "green") {
+			fmt.Println(string(bodyBytes))
 			return errors.New("elasticsearch is not ready yet")
 		}
 
@@ -333,4 +341,7 @@ func createTestDocument(ownerID uuid.UUID) routes.DocumentResponse {
 		ID:   document.ID,
 		Name: document.Name,
 	}
+}
+
+func addUserToElasticsearch(searchClient *elasticsearch.TypedClient, user TestUser) {
 }
