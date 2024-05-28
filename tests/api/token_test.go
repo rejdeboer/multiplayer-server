@@ -109,8 +109,8 @@ func TestGetToken(t *testing.T) {
 			t.Errorf("error decoding jwt: %s", err)
 		}
 
-		if claims["username"] != testUser.Username {
-			t.Errorf("expected username: %s; got: %s", testUser.Username, claims["username"])
+		if claims["user_id"].(string) != testUser.ID.String() {
+			t.Errorf("expected ID: %s; got: %s", testUser.ID, claims["user_id"])
 		}
 	})
 }

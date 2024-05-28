@@ -105,8 +105,6 @@ func (app *TestApp) GetSignedJwt(userID uuid.UUID) string {
 		app.SigningKey,
 		10000,
 		userID.String(),
-		// TODO: We probably don't need the username inside a claim anymore
-		"",
 	)
 	if err != nil {
 		log.Fatalf("error creating test token: %s", err)

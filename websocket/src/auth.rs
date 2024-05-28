@@ -24,7 +24,6 @@ pub struct Claims {
 #[derive(Debug, Clone)]
 pub struct User {
     pub id: Uuid,
-    pub username: String,
 }
 
 pub async fn auth_middleware(
@@ -43,7 +42,6 @@ pub async fn auth_middleware(
 
     let user = User {
         id: Uuid::from_str(&token.claims.user_id).unwrap(),
-        username: token.claims.username,
     };
     req.extensions_mut().insert(user);
 

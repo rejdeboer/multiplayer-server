@@ -98,16 +98,7 @@ func TestDeleteDocument(t *testing.T) {
 		}
 
 		otherUser := testApp.GetTestUser()
-		token, err := routes.GetJwt(
-			testApp.SigningKey,
-			1000,
-			otherUser.ID.String(),
-			otherUser.Username,
-		)
-		if err != nil {
-			t.Fatalf("error creating test token: %s", err)
-		}
-		req.Header.Add("Authorization", "Bearer "+token)
+		req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(otherUser.ID))
 
 		rr := httptest.NewRecorder()
 		testApp.Handler.ServeHTTP(rr, req)

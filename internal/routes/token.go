@@ -50,7 +50,7 @@ func (env *Env) getToken(signingKey string, tokenExpirationSeconds uint16) http.
 			return
 		}
 
-		token, err := GetJwt(signingKey, tokenExpirationSeconds, user.ID.String(), user.Username)
+		token, err := GetJwt(signingKey, tokenExpirationSeconds, user.ID.String())
 		if err != nil {
 			httperrors.InternalServerError(w)
 			log.Error().Err(err).Msg("error signing jwt")
@@ -73,11 +73,10 @@ func (env *Env) getToken(signingKey string, tokenExpirationSeconds uint16) http.
 	}
 }
 
-func GetJwt(signingKey string, tokenExpirationSeconds uint16, userId string, username string) (string, error) {
+func GetJwt(signingKey string, tokenExpirationSeconds uint16, userId string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
-	claims["username"] = username
 	claims["user_id"] = userId
 	claims["exp"] = time.Now().Add(time.Second * time.Duration(tokenExpirationSeconds)).Unix()
 
