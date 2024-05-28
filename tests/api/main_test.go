@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/tests/helpers"
 )
