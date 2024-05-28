@@ -158,6 +158,7 @@ func (env *Env) searchUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info().Int("items", len(users)).Msg("sending users")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 }

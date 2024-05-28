@@ -8,8 +8,11 @@ import (
 	"github.com/brianvoe/gofakeit"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/rejdeboer/multiplayer-server/internal/application"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
@@ -33,7 +36,7 @@ type TestUser struct {
 	Password string
 }
 
-// Should be ran in the main test function
+// Should be run in the main test function
 func InitApplication(settings configuration.Settings) {
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{
 		"bootstrap.servers": settings.Application.KafkaEndpoint,
@@ -135,5 +138,15 @@ func (app *TestApp) GetTestDocument(ownerID uuid.UUID) routes.DocumentResponse {
 	return routes.DocumentResponse{
 		ID:   document.ID,
 		Name: document.Name,
+	}
+}
+
+func (app *TestApp) InsertElasticsearch(index string, doc interface{}) {
+	_, err := app.searchClient.Index(index).
+		Request(doc).
+		Refresh(refresh.True).
+		Do(context.Background())
+	if err != nil {
+		log.Fatalf("error inserting user in index: %s", err)
 	}
 }

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/ory/dockertest/v3"
@@ -85,6 +87,7 @@ func SpawnCluster() *Cluster {
 	if err := pool.Retry(waitElasticsearchContainerToBeReady(searchClient)); err != nil {
 		log.Fatalf("elasticsearch container not intialized: %s", err)
 	}
+	createElasticsearchIndices(searchClient)
 
 	if err := pool.Retry(waitAzuriteContainerToBeReady(cluster.GetAzuriteHostPort())); err != nil {
 		log.Fatalf("azurite container not intialized: %s", err)
@@ -207,4 +210,21 @@ func startMigration(db *sql.DB) {
 	}
 
 	migrate.Up()
+}
+
+func createElasticsearchIndices(searchClient *elasticsearch.TypedClient) {
+	_, err := searchClient.Indices.Create("users").
+		Request(&create.Request{
+			Mappings: &types.TypeMapping{
+				Properties: map[string]types.Property{
+					"id":       types.NewTextProperty(),
+					"username": types.NewTextProperty(),
+					"email":    types.NewTextProperty(),
+				},
+			},
+		}).
+		Do(nil)
+	if err != nil {
+		log.Fatal("error creating users index in elasticsearch")
+	}
 }
