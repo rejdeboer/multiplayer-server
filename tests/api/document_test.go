@@ -9,10 +9,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"github.com/rejdeboer/multiplayer-server/tests/helpers"
 )
 
 func TestCreateDocument(t *testing.T) {
-	testApp := GetTestApp()
+	testApp := helpers.GetTestApp()
+	testUser := testApp.GetTestUser()
 	documentName := "some document"
 
 	bodyBytes, err := json.Marshal(routes.DocumentCreate{
@@ -23,13 +25,13 @@ func TestCreateDocument(t *testing.T) {
 	}
 
 	req, err := http.NewRequest(http.MethodPost, "/document", bytes.NewReader(bodyBytes))
-	req.Header.Add("Authorization", "Bearer "+testApp.token)
+	req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(testUser.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	rr := httptest.NewRecorder()
-	testApp.handler.ServeHTTP(rr, req)
+	testApp.Handler.ServeHTTP(rr, req)
 
 	status := rr.Result().StatusCode
 	if status != 200 {
@@ -42,8 +44,8 @@ func TestCreateDocument(t *testing.T) {
 		t.Errorf("error decoding json response: %v", err)
 	}
 
-	if response.OwnerID != testApp.user.ID {
-		t.Errorf("output user_id mismatch; expected %v; got %v", testApp.user.ID, response.ID)
+	if response.OwnerID != testUser.ID {
+		t.Errorf("output user_id mismatch; expected %v; got %v", testUser.ID, response.ID)
 	}
 
 	if response.Name != documentName {
@@ -52,18 +54,20 @@ func TestCreateDocument(t *testing.T) {
 }
 
 func TestDeleteDocument(t *testing.T) {
-	testApp := GetTestApp()
-	testDocID := testApp.document.ID
+	testApp := helpers.GetTestApp()
+	testUser := testApp.GetTestUser()
+	testDoc := testApp.GetTestDocument(testUser.ID)
+	testDocID := testDoc.ID
 
 	t.Run("success response", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodDelete, "/document/"+testDocID.String(), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		req.Header.Add("Authorization", "Bearer "+testApp.token)
+		req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(testUser.ID))
 
 		rr := httptest.NewRecorder()
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		status := rr.Result().StatusCode
 		if status != 202 {
@@ -76,10 +80,10 @@ func TestDeleteDocument(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		req.Header.Add("Authorization", "Bearer "+testApp.token)
+		req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(testUser.ID))
 
 		rr := httptest.NewRecorder()
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		status := rr.Result().StatusCode
 		if status != 404 {
@@ -93,10 +97,10 @@ func TestDeleteDocument(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		otherUser := createTestUser()
+		otherUser := testApp.GetTestUser()
 		token, err := routes.GetJwt(
-			settings.Application.SigningKey,
-			settings.Application.TokenExpirationSeconds,
+			testApp.SigningKey,
+			1000,
 			otherUser.ID.String(),
 			otherUser.Username,
 		)
@@ -106,7 +110,7 @@ func TestDeleteDocument(t *testing.T) {
 		req.Header.Add("Authorization", "Bearer "+token)
 
 		rr := httptest.NewRecorder()
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		status := rr.Result().StatusCode
 		if status != 404 {
@@ -116,17 +120,19 @@ func TestDeleteDocument(t *testing.T) {
 }
 
 func TestListDocuments(t *testing.T) {
-	testApp := GetTestApp()
-	testDocID := testApp.document.ID
+	testApp := helpers.GetTestApp()
+	testUser := testApp.GetTestUser()
+	testDoc := testApp.GetTestDocument(testUser.ID)
+	testDocID := testDoc.ID
 
 	req, err := http.NewRequest(http.MethodGet, "/document", nil)
-	req.Header.Add("Authorization", "Bearer "+testApp.token)
+	req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(testUser.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	rr := httptest.NewRecorder()
-	testApp.handler.ServeHTTP(rr, req)
+	testApp.Handler.ServeHTTP(rr, req)
 
 	status := rr.Result().StatusCode
 	if status != 200 {
@@ -152,18 +158,20 @@ func TestListDocuments(t *testing.T) {
 }
 
 func TestGetDocument(t *testing.T) {
-	testApp := GetTestApp()
-	testDocID := testApp.document.ID
+	testApp := helpers.GetTestApp()
+	testUser := testApp.GetTestUser()
+	testDoc := testApp.GetTestDocument(testUser.ID)
+	testDocID := testDoc.ID
 
 	t.Run("success response", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, "/document/"+testDocID.String(), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		req.Header.Add("Authorization", "Bearer "+testApp.token)
+		req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(testUser.ID))
 
 		rr := httptest.NewRecorder()
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		status := rr.Result().StatusCode
 		if status != 200 {
@@ -177,7 +185,7 @@ func TestGetDocument(t *testing.T) {
 		}
 
 		if testDocID != response.ID {
-			t.Errorf("documents do not match; expected: %v; was: %v", testApp.document, response)
+			t.Errorf("documents do not match; expected: %v; was: %v", testDoc, response)
 		}
 	})
 
@@ -188,7 +196,7 @@ func TestGetDocument(t *testing.T) {
 		}
 
 		rr := httptest.NewRecorder()
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		status := rr.Result().StatusCode
 		if status != 401 {

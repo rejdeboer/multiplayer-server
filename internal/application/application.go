@@ -26,7 +26,7 @@ func Build(settings configuration.Settings) Application {
 	port := settings.Application.Port
 	addr := fmt.Sprintf(":%d", port)
 
-	pool := getDbConnectionPool(settings.Database)
+	pool := GetDbConnectionPool(settings.Database)
 
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{
 		"bootstrap.servers": settings.Application.KafkaEndpoint,
@@ -68,7 +68,7 @@ func (app *Application) close() {
 	app.producer.Close()
 }
 
-func getDbConnectionPool(settings configuration.DatabaseSettings) *pgxpool.Pool {
+func GetDbConnectionPool(settings configuration.DatabaseSettings) *pgxpool.Pool {
 	dbUrl := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
 		settings.Username,
 		settings.Password,
@@ -90,4 +90,14 @@ func getDbConnectionPool(settings configuration.DatabaseSettings) *pgxpool.Pool 
 	}
 
 	return pool
+}
+
+func GetSearchClient(endpoint string) *elasticsearch.TypedClient {
+	client, err := elasticsearch.NewTypedClient(elasticsearch.Config{
+		Addresses: []string{endpoint},
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("error creating search client")
+	}
+	return client
 }

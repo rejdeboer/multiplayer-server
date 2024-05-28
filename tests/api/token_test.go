@@ -10,11 +10,12 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
+	"github.com/rejdeboer/multiplayer-server/tests/helpers"
 )
 
 func TestGetToken(t *testing.T) {
-	testApp := GetTestApp()
-	testUser := testApp.user
+	testApp := helpers.GetTestApp()
+	testUser := testApp.GetTestUser()
 
 	cases := []struct {
 		name                 string
@@ -56,7 +57,7 @@ func TestGetToken(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			testApp.handler.ServeHTTP(rr, req)
+			testApp.Handler.ServeHTTP(rr, req)
 
 			if rr.Result().StatusCode != testCase.outputStatusCode {
 				t.Errorf("expected %d got %d", testCase.outputStatusCode, rr.Result().StatusCode)
@@ -92,7 +93,7 @@ func TestGetToken(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		var response routes.TokenResponse
 		err = json.NewDecoder(rr.Body).Decode(&response)
@@ -102,7 +103,7 @@ func TestGetToken(t *testing.T) {
 
 		claims := jwt.MapClaims{}
 		_, err = jwt.ParseWithClaims(response.Token, claims, func(t *jwt.Token) (interface{}, error) {
-			return []byte(testApp.settings.SigningKey), nil
+			return []byte(testApp.SigningKey), nil
 		})
 		if err != nil {
 			t.Errorf("error decoding jwt: %s", err)

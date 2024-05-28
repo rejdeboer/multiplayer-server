@@ -8,14 +8,17 @@ import (
 	"testing"
 
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"github.com/rejdeboer/multiplayer-server/tests/helpers"
 )
 
 func TestCreateContributor(t *testing.T) {
-	testApp := GetTestApp()
-	testDocID := testApp.document.ID
+	testApp := helpers.GetTestApp()
+	testUser := testApp.GetTestUser()
+	testDoc := testApp.GetTestDocument(testUser.ID)
+	testDocID := testDoc.ID
 
 	t.Run("success response", func(t *testing.T) {
-		otherUser := createTestUser()
+		otherUser := testApp.GetTestUser()
 		bodyBytes, err := json.Marshal(routes.DocumentContributorCreate{
 			UserID: otherUser.ID,
 		})
@@ -31,10 +34,10 @@ func TestCreateContributor(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		req.Header.Add("Authorization", "Bearer "+testApp.token)
+		req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(testUser.ID))
 
 		rr := httptest.NewRecorder()
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		status := rr.Result().StatusCode
 		if status != 202 {
@@ -43,7 +46,7 @@ func TestCreateContributor(t *testing.T) {
 	})
 
 	t.Run("user tries to add themselves", func(t *testing.T) {
-		otherUser := createTestUser()
+		otherUser := testApp.GetTestUser()
 		bodyBytes, err := json.Marshal(routes.DocumentContributorCreate{
 			UserID: otherUser.ID,
 		})
@@ -59,19 +62,10 @@ func TestCreateContributor(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		token, err := routes.GetJwt(
-			settings.Application.SigningKey,
-			settings.Application.TokenExpirationSeconds,
-			otherUser.ID.String(),
-			otherUser.Username,
-		)
-		if err != nil {
-			t.Fatalf("error creating test token: %s", err)
-		}
-		req.Header.Add("Authorization", "Bearer "+token)
+		req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(otherUser.ID))
 
 		rr := httptest.NewRecorder()
-		testApp.handler.ServeHTTP(rr, req)
+		testApp.Handler.ServeHTTP(rr, req)
 
 		status := rr.Result().StatusCode
 		if status != 404 {

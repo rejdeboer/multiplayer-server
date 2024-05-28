@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
+	"github.com/rejdeboer/multiplayer-server/tests/helpers"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -100,7 +101,7 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
-	testApp := GetTestApp()
+	testApp := helpers.GetTestApp()
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			bodyBytes, err := json.Marshal(testCase.input)
@@ -115,7 +116,7 @@ func TestCreateUser(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			testApp.handler.ServeHTTP(rr, req)
+			testApp.Handler.ServeHTTP(rr, req)
 
 			status := rr.Result().StatusCode
 			if status != testCase.outputStatusCode {
