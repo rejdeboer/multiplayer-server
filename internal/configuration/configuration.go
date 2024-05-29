@@ -29,8 +29,8 @@ type ApplicationSettings struct {
 	Port                   uint16 `yaml:"port" envconfig:"PORT"`
 	SigningKey             string `yaml:"signing_key" envconfig:"JWT_SECRET_KEY"`
 	TokenExpirationSeconds uint16 `yaml:"token_expiration_seconds"`
-	KafkaEndpoint          string `yaml:"kafka_endpoint"`
-	ElasticsearchEndpoint  string `yaml:"elasticsearch_endpoint"`
+	KafkaEndpoint          string `yaml:"kafka_endpoint" envconfig:"KAFKA_ENDPOINT"`
+	ElasticsearchEndpoint  string `yaml:"elasticsearch_endpoint" envconfig:"ELASTICSEARCH_ENDPOINT"`
 }
 
 type AzureSettings struct {
