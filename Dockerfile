@@ -1,4 +1,4 @@
-FROM golang:1.22.1 AS build-stage
+FROM golang:1.22.1-alpine AS build-stage
 
 WORKDIR /app
 
@@ -7,11 +7,13 @@ RUN go mod download
 
 COPY ./ ./
 
-RUN CGO_ENABLED=1 GOOS=linux go build -o ./tmp/main ./cmd/multiplayer-server/main.go
+RUN apk add alpine-sdk 
 
-FROM golang:1.22.1-alpine AS build-release-stage
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -tags musl -o main ./cmd/multiplayer-server/main.go
 
-COPY --from=build-stage /app/tmp/main /app/tmp/main
+FROM golang:1.22.1-alpine 
+
+COPY --from=build-stage /app/main /app/main
 COPY --from=build-stage /app/configuration /app/configuration
 COPY --from=build-stage /app/db/migrations /app/db/migrations
 
@@ -21,4 +23,4 @@ USER root
 
 WORKDIR /app
 
-ENTRYPOINT ["/app/tmp/main"]
+ENTRYPOINT ["/app/main"]
