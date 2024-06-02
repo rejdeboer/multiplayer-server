@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"github.com/segmentio/kafka-go"
 )
 
 var log = logger.Get()
 
 type Application struct {
 	pool     *pgxpool.Pool
-	producer *kafka.Producer
+	producer *kafka.Writer
 	handler  http.Handler
 	addr     string
 }
@@ -28,11 +28,9 @@ func Build(settings configuration.Settings) Application {
 
 	pool := GetDbConnectionPool(settings.Database)
 
-	producer, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": settings.Application.KafkaEndpoint,
-	})
-	if err != nil {
-		log.Fatal().Err(err).Msg("error creating kafka producer")
+	producer := &kafka.Writer{
+		Addr:     kafka.TCP(settings.Application.KafkaEndpoint),
+		Balancer: &kafka.LeastBytes{},
 	}
 
 	searchClient, err := elasticsearch.NewTypedClient(elasticsearch.Config{

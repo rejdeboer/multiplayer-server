@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,13 +10,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/google/uuid"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/pkg/httperrors"
 	"github.com/rs/zerolog"
+	"github.com/segmentio/kafka-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -110,11 +111,11 @@ func (env *Env) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	topic := USERS_TOPIC
-	env.Producer.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-		Key:            []byte(createdUser.ID.String()),
-		Value:          body,
-	}, nil)
+	env.Producer.WriteMessages(context.Background(), kafka.Message{
+		Topic: topic,
+		Key:   []byte(createdUser.ID.String()),
+		Value: body,
+	})
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)

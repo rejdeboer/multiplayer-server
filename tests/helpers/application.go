@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/brianvoe/gofakeit"
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -17,6 +16,7 @@ import (
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
 	"github.com/rejdeboer/multiplayer-server/internal/db"
 	"github.com/rejdeboer/multiplayer-server/internal/routes"
+	"github.com/segmentio/kafka-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -38,11 +38,9 @@ type TestUser struct {
 
 // Should be run in the main test function
 func InitApplication(settings configuration.Settings) {
-	producer, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": settings.Application.KafkaEndpoint,
-	})
-	if err != nil {
-		log.Fatalf("error creating kafka producer")
+	producer := &kafka.Writer{
+		Addr:     kafka.TCP(settings.Application.KafkaEndpoint),
+		Balancer: &kafka.LeastBytes{},
 	}
 
 	dbpool := application.GetDbConnectionPool(settings.Database)
