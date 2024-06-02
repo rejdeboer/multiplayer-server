@@ -9,7 +9,7 @@ COPY ./ ./
 
 RUN apk add alpine-sdk 
 
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -tags musl -o main ./cmd/multiplayer-server/main.go
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=arm64 CC=gcc go build -tags musl -o main ./cmd/multiplayer-server/main.go
 
 FROM golang:1.22.1-alpine 
 
