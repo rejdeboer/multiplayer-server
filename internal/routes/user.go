@@ -91,14 +91,6 @@ func (env *Env) createUser(w http.ResponseWriter, r *http.Request) {
 	userID := createdUser.ID.String()
 	log.Info().Str("user_id", userID).Msg("created new user")
 
-	_, err = env.Blob.CreateContainer(ctx, userID, nil)
-	if err != nil {
-		httperrors.InternalServerError(w)
-		log.Error().Err(err).Str("user_id", userID).Msg("failed to create blob container")
-		return
-	}
-	log.Info().Msg("created new blob container")
-
 	body, err := json.Marshal(UserResponse{
 		ID:       createdUser.ID,
 		Email:    user.Email,
