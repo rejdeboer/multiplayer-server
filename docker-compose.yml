@@ -11,13 +11,14 @@ services:
       - 8000:8000
     entrypoint: bash -c "
         apt-get update
-        && cp ./resources/az-dev-cert.pem /etc/ssl/certs
-        && chmod 644 /etc/ssl/certs/az-dev-cert.pem && update-ca-certificates
         && apt-get install -y postgresql-client
         && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
         && migrate -database "postgres://postgres:password@postgres:5432/multiplayer?sslmode=disable" -path=db/migrations up
         && /go/bin/air -c .air.toml
       "
+    # NOTE: For https, use the following:
+    # && cp ./resources/az-dev-cert.pem /etc/ssl/certs
+    # && chmod 644 /etc/ssl/certs/az-dev-cert.pem && update-ca-certificates
   websocket-api:
     depends_on:
       - postgres
@@ -165,6 +166,25 @@ services:
       - "10000:10000"
       - "10001:10001"
       - "10002:10002"
-    volumes:
-      - ./resources/:/opt/azurite/resources
-    entrypoint: azurite --blobHost 0.0.0.0 --cert ./resources/az-dev-cert.pem --key ./resources/az-dev-key.pem --oauth basic
+    # volumes:
+    #   - ./resources/:/opt/azurite/resources
+    # required, see https://github.com/Azure/Azurite/issues/1666
+    healthcheck:
+        test: nc 127.0.0.1 10000 -z
+        interval: 1s
+        retries: 30
+    # entrypoint: azurite --blobHost 0.0.0.0 --cert ./resources/az-dev-cert.pem --key ./resources/az-dev-key.pem --oauth basic
+
+  init-azurite:
+    image: mcr.microsoft.com/azure-cli:latest
+    command:
+      - /bin/sh
+      - -c
+      - |
+          az storage container create --name user-images
+    depends_on:
+      - azurite
+        # condition: service_healthy
+    environment:
+      # https://github.com/Azure/Azurite/blob/main/README.md#usage-with-azure-storage-sdks-or-tools
+      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
