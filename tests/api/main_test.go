@@ -14,7 +14,6 @@ func TestMain(m *testing.M) {
 	defer cluster.Purge()
 
 	settings := configuration.ReadConfiguration("../../configuration")
-	// settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "https", "http")
 	settings.Azure.BlobConnectionString = strings.ReplaceAll(settings.Azure.BlobConnectionString, "azurite:10000", cluster.GetAzuriteHostPort())
 	settings.Application.ElasticsearchEndpoint = cluster.GetElasticsearchEndpoint()
 	settings.Database.Host = "localhost"

@@ -16,9 +16,6 @@ services:
         && migrate -database "postgres://postgres:password@postgres:5432/multiplayer?sslmode=disable" -path=db/migrations up
         && /go/bin/air -c .air.toml
       "
-    # NOTE: For https, use the following:
-    # && cp ./resources/az-dev-cert.pem /etc/ssl/certs
-    # && chmod 644 /etc/ssl/certs/az-dev-cert.pem && update-ca-certificates
   websocket-api:
     depends_on:
       - postgres
@@ -166,14 +163,11 @@ services:
       - "10000:10000"
       - "10001:10001"
       - "10002:10002"
-    # volumes:
-    #   - ./resources/:/opt/azurite/resources
     # required, see https://github.com/Azure/Azurite/issues/1666
     healthcheck:
         test: nc 127.0.0.1 10000 -z
         interval: 1s
         retries: 30
-    # entrypoint: azurite --blobHost 0.0.0.0 --cert ./resources/az-dev-cert.pem --key ./resources/az-dev-key.pem --oauth basic
 
   init-azurite:
     image: mcr.microsoft.com/azure-cli:latest
