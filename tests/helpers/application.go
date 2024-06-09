@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/brianvoe/gofakeit"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh"
@@ -46,6 +47,12 @@ func InitApplication(settings configuration.Settings) {
 	dbpool := application.GetDbConnectionPool(settings.Database)
 
 	searchClient := application.GetSearchClient(settings.Application.ElasticsearchEndpoint)
+
+	blobClient := application.GetBlobClient(settings.Azure)
+	_, err := blobClient.CreateContainer(context.Background(), application.USER_IMAGES_CONTAINER, &container.CreateOptions{})
+	if err != nil {
+		log.Fatalf("error creating user images container: %v", err)
+	}
 
 	handler := routes.CreateHandler(settings, &routes.Env{
 		Pool:         dbpool,
