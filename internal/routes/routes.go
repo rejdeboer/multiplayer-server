@@ -38,6 +38,7 @@ func CreateHandler(settings configuration.Settings, env *Env) http.Handler {
 	mux.HandleFunc("POST /document/{document_id}/contributor", authorized(env.addDocumentContributor))
 
 	mux.HandleFunc("POST /user", env.createUser)
+	mux.HandleFunc("POST /user/image", env.updateUserImage)
 	mux.HandleFunc("GET /user/search", env.searchUsers)
 	mux.HandleFunc("POST /token", env.getToken(settings.Application.SigningKey, settings.Application.TokenExpirationSeconds))
 

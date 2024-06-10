@@ -7,8 +7,6 @@ import (
 	"github.com/rejdeboer/multiplayer-server/internal/logger"
 )
 
-const USER_IMAGES_CONTAINER string = "user-images"
-
 func GetBlobClient(settings configuration.AzureSettings) *azblob.Client {
 	l := logger.Get()
 

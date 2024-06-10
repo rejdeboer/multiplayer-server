@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/mail"
+	"os"
 	"strings"
 	"unicode"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/google/uuid"
@@ -19,6 +21,9 @@ import (
 	"github.com/segmentio/kafka-go"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024 // 10MB
+const USER_IMAGES_CONTAINER string = "user-images"
 
 type UserCreate struct {
 	Email    string `json:"email"`
@@ -30,12 +35,14 @@ type UserResponse struct {
 	ID       uuid.UUID `json:"id"`
 	Email    string    `json:"email"`
 	Username string    `json:"username"`
+	ImageUrl string    `json:"imageUrl"`
 }
 
 type UserListItem struct {
 	ID       uuid.UUID `json:"id"`
 	Email    string    `json:"email"`
 	Username string    `json:"username"`
+	ImageUrl string    `json:"imageUrl"`
 }
 
 const USERS_TOPIC string = "users"
@@ -154,6 +161,65 @@ func (env *Env) searchUsers(w http.ResponseWriter, r *http.Request) {
 	log.Info().Int("items", len(users)).Msg("sending users")
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
+}
+
+func (env *Env) updateUserImage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := zerolog.Ctx(ctx)
+
+	userID, err := uuid.Parse(ctx.Value("user_id").(string))
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("failed to parse uuid")
+		return
+	}
+
+	*log = log.With().
+		Str("user_id", userID.String()).
+		Logger()
+
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
+	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
+		httperrors.Write(w, "The uploaded file is too big. Please choose an file that's less than 10MB in size", http.StatusBadRequest)
+		log.Error().Err(err).Msg("file is too large")
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error reading input file")
+		return
+	}
+	defer file.Close()
+
+	_, err = env.Blob.UploadFile(
+		ctx,
+		USER_IMAGES_CONTAINER,
+		userID.String(),
+		file.(*os.File),
+		&blockblob.UploadFileOptions{},
+	)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error storing user image in blob storage")
+		return
+	}
+
+	imageUrl := env.Blob.URL() + "/" + userID.String()
+	q := db.New(env.Pool)
+	err = q.UpdateUserImage(ctx, db.UpdateUserImageParams{
+		ID:       userID,
+		ImageUrl: &imageUrl,
+	})
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error storing user image in db")
+		return
+	}
+
+	log.Info().Msg("updated user image")
+	w.WriteHeader(http.StatusOK)
 }
 
 func hashPassword(password string) (string, error) {

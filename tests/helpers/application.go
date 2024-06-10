@@ -49,7 +49,7 @@ func InitApplication(settings configuration.Settings) {
 	searchClient := application.GetSearchClient(settings.Application.ElasticsearchEndpoint)
 
 	blobClient := application.GetBlobClient(settings.Azure)
-	_, err := blobClient.CreateContainer(context.Background(), application.USER_IMAGES_CONTAINER, &container.CreateOptions{})
+	_, err := blobClient.CreateContainer(context.Background(), routes.USER_IMAGES_CONTAINER, &container.CreateOptions{})
 	if err != nil {
 		log.Fatalf("error creating user images container: %v", err)
 	}

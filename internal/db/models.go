@@ -31,4 +31,5 @@ type User struct {
 	Email    string
 	Username string
 	Passhash string
+	ImageUrl *string
 }
