@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/mail"
 	"os"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -185,13 +186,21 @@ func (env *Env) updateUserImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, _, err := r.FormFile("file")
+	file, fh, err := r.FormFile("file")
 	if err != nil {
 		httperrors.InternalServerError(w)
 		log.Error().Err(err).Msg("error reading input file")
 		return
 	}
 	defer file.Close()
+
+	fileNameSplit := strings.Split(fh.Filename, ".")
+	fileExtension := fileNameSplit[len(fileNameSplit)-1]
+	if isAllowedFileType(fileExtension) {
+		httperrors.Write(w, "Please provide a jpg or png file", http.StatusBadRequest)
+		log.Error().Str("file_type", fileExtension).Msg("invalid file type")
+		return
+	}
 
 	_, err = env.Blob.UploadFile(
 		ctx,
@@ -293,4 +302,8 @@ func validatePassword(password string) error {
 	}
 
 	return nil
+}
+
+func isAllowedFileType(fileType string) bool {
+	return slices.Contains([]string{"png", "jpg", "jpeg"}, fileType)
 }
