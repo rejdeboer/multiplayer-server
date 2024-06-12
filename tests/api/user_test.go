@@ -3,8 +3,11 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -146,5 +149,43 @@ func TestCreateUser(t *testing.T) {
 				t.Errorf("output body mismatch; expected %v; got %v", testCase.outputBody, response)
 			}
 		})
+	}
+}
+
+func TestUpdateUserImage(t *testing.T) {
+	testApp := helpers.GetTestApp()
+	testUser := testApp.GetTestUser()
+
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+
+	dataPart, err := writer.CreateFormFile("file", "file.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.Open("../resources/user-image.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(dataPart, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer.Close()
+
+	req, err := http.NewRequest(http.MethodPost, "/user/image", body)
+	req.Header.Add("Authorization", "Bearer "+testApp.GetSignedJwt(testUser.ID))
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	testApp.Handler.ServeHTTP(rr, req)
+
+	status := rr.Result().StatusCode
+	if status != 200 {
+		t.Errorf("expected %d got %d", 200, rr.Result().StatusCode)
 	}
 }
