@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/mail"
-	"os"
 	"slices"
 	"strings"
 	"unicode"
@@ -23,8 +23,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const MAX_UPLOAD_SIZE = 10 * 1024 * 1024 // 10MB
-const USER_IMAGES_CONTAINER string = "user-images"
+const (
+	MAX_UPLOAD_SIZE       = 10 * 1024 * 1024 // 10MB
+	USER_IMAGES_CONTAINER = "user-images"
+	USERS_TOPIC           = "users"
+)
 
 type UserCreate struct {
 	Email    string `json:"email"`
@@ -45,8 +48,6 @@ type UserListItem struct {
 	Username string    `json:"username"`
 	ImageUrl string    `json:"imageUrl"`
 }
-
-const USERS_TOPIC string = "users"
 
 func (env *Env) createUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -182,7 +183,7 @@ func (env *Env) updateUserImage(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
 	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
 		httperrors.Write(w, "The uploaded file is too big. Please choose an file that's less than 10MB in size", http.StatusBadRequest)
-		log.Error().Err(err).Msg("file is too large")
+		log.Error().Err(err).Msg("error parsing form")
 		return
 	}
 
@@ -196,17 +197,24 @@ func (env *Env) updateUserImage(w http.ResponseWriter, r *http.Request) {
 
 	fileNameSplit := strings.Split(fh.Filename, ".")
 	fileExtension := fileNameSplit[len(fileNameSplit)-1]
-	if isAllowedFileType(fileExtension) {
+	if !isAllowedFileType(fileExtension) {
 		httperrors.Write(w, "Please provide a jpg or png file", http.StatusBadRequest)
 		log.Error().Str("file_type", fileExtension).Msg("invalid file type")
 		return
 	}
 
-	_, err = env.Blob.UploadFile(
+	imageBytes, err := io.ReadAll(file)
+	if err != nil {
+		httperrors.InternalServerError(w)
+		log.Error().Err(err).Msg("error getting file bytes")
+		return
+	}
+
+	_, err = env.Blob.UploadBuffer(
 		ctx,
 		USER_IMAGES_CONTAINER,
 		userID.String(),
-		file.(*os.File),
+		imageBytes,
 		&blockblob.UploadFileOptions{},
 	)
 	if err != nil {
