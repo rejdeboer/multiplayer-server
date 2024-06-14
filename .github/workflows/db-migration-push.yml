@@ -1,0 +1,68 @@
+name: Http server push
+
+on:
+  push:
+    paths:
+      - ".github/workflows/db-migration-push.yml"
+      - "internal/application/db.go"
+      - "internal/configuration/**"
+      - "configuration/**"
+      - "db/**"
+  workflow_dispatch:
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+permissions:
+      id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22.1'
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets. ARM_SUBSCRIPTION_ID }}
+
+      - name: Build and push image
+        id: build-image
+        run: |
+         az acr build --image rejdeboer.azurecr.io/multiplayer-server:${{ github.sha }} --registry rejdeboer --file "db/Dockerfile" .
+
+  modify-manifest:
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out config repo
+        uses: actions/checkout@v3
+        with:
+          repository: 'rejdeboer/multiplayer-deployment'
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Modify application image
+        run: |
+          git config user.email rick.deboer@live.nl
+          git config user.name rejdeboer
+          sed -i "s+rejdeboer.azurecr.io/multiplayer-db-migration:.*+rejdeboer.azurecr.io/multiplayer-db-migration:${{ github.sha }}+g" pre-deploy/migration.job.yml
+          git add .
+          git commit -m 'automated: update multiplayer-db-migration image'
+          git push origin master
