@@ -1,3 +1,4 @@
+# NOTE: This image is used to apply DB migrations inside the K8S cluster
 FROM golang:1.22.1-alpine AS build-stage
 
 WORKDIR /app
@@ -7,17 +8,14 @@ RUN go mod download
 
 COPY ./ ./
 
-RUN CGO_ENABLED=0 go build -o main ./cmd/multiplayer-server/main.go
+RUN CGO_ENABLED=0 go build -o main ./db/migration.go
 
 FROM scratch 
 
 COPY --from=build-stage /app/main /app/main
 COPY --from=build-stage /app/configuration /app/configuration
-
-EXPOSE 8000
+COPY --from=build-stage /app/db/migrations /app/migrations
 
 WORKDIR /app
-
-USER root
 
 ENTRYPOINT ["/app/main"]

@@ -1,24 +1,15 @@
 version: '3'
 services:
   http-api:
-    depends_on: 
-      - postgres
     image: cosmtrek/air
     working_dir: /app
     volumes:
       - ./:/app
     ports:
       - 8000:8000
-    entrypoint: bash -c "
-        apt-get update
-        && apt-get install -y postgresql-client
-        && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-        && migrate -database "postgres://postgres:password@postgres:5432/multiplayer?sslmode=disable" -path=db/migrations up
-        && /go/bin/air -c .air.toml
-      "
+    entrypoint: /go/bin/air -c .air.toml
+
   websocket-api:
-    depends_on:
-      - postgres
     build: 
       context: ./websocket
       dockerfile: Dockerfile
@@ -47,6 +38,19 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=postgres
       - POSTGRES_DB=multiplayer
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d multiplayer -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-migration:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build: 
+      dockerfile: ./db/Dockerfile
+    working_dir: /app
 
   elasticsearch:
     container_name: elastic

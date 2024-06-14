@@ -1,7 +1,6 @@
 package application
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -64,30 +63,6 @@ func (app *Application) Start() error {
 func (app *Application) close() {
 	app.pool.Close()
 	app.producer.Close()
-}
-
-func GetDbConnectionPool(settings configuration.DatabaseSettings) *pgxpool.Pool {
-	dbUrl := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
-		settings.Username,
-		settings.Password,
-		settings.Host,
-		settings.Port,
-		settings.DbName,
-	)
-
-	if !settings.RequireSsl {
-		dbUrl = dbUrl + "?sslmode=disable"
-	} else {
-		dbUrl = dbUrl + "?sslmode=verify-full&sslrootcert=" + settings.CertificatePath
-	}
-
-	pool, err := pgxpool.New(context.Background(), dbUrl)
-	if err != nil {
-		log.Error().Msg("failed to connect to db")
-		panic(err)
-	}
-
-	return pool
 }
 
 func GetSearchClient(endpoint string) *elasticsearch.TypedClient {
