@@ -51,7 +51,9 @@ func getAzAccessToken() string {
 	if err != nil {
 		log.Fatalf("could not get azwi credential: %s", err)
 	}
-	token, err := credential.GetToken(context.Background(), policy.TokenRequestOptions{})
+	token, err := credential.GetToken(context.Background(), policy.TokenRequestOptions{
+		Scopes: []string{"https://management.azure.com/.default"},
+	})
 	if err != nil {
 		log.Fatalf("could not get az access token: %s", err)
 	}
