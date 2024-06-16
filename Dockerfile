@@ -9,7 +9,9 @@ COPY ./ ./
 
 RUN CGO_ENABLED=0 go build -o main ./cmd/multiplayer-server/main.go
 
-FROM scratch 
+FROM alpine 
+
+RUN apk --update add ca-certificates
 
 COPY --from=build-stage /app/main /app/main
 COPY --from=build-stage /app/configuration /app/configuration
