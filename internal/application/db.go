@@ -37,9 +37,6 @@ func GetDbConnectionString(settings configuration.DatabaseSettings) string {
 	if !settings.RequireSsl {
 		dbUrl = dbUrl + "?sslmode=disable"
 	}
-	// else {
-	// 	dbUrl = dbUrl + "?sslmode=verify-full&sslrootcert=" + settings.CertificatePath
-	// }
 
 	return dbUrl
 }
