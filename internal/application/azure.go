@@ -1,14 +1,17 @@
 package application
 
 import (
+	"sync"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/rejdeboer/multiplayer-server/internal/configuration"
-	"github.com/rejdeboer/multiplayer-server/internal/logger"
 )
 
+var once sync.Once
+var credential *azidentity.DefaultAzureCredential
+
 func GetBlobClient(settings configuration.AzureSettings) *azblob.Client {
-	l := logger.Get()
 
 	var client *azblob.Client
 	var err error
@@ -17,15 +20,22 @@ func GetBlobClient(settings configuration.AzureSettings) *azblob.Client {
 		client, err = azblob.NewClientFromConnectionString(settings.BlobConnectionString, nil)
 	} else {
 		// Production
-		credential, err := azidentity.NewDefaultAzureCredential(nil)
-		if err != nil {
-			l.Fatal().Err(err).Msg("error getting azure blob storage credentials")
-		}
-		client, err = azblob.NewClient(settings.BlobStorageEndpoint, credential, nil)
+		client, err = azblob.NewClient(settings.BlobStorageEndpoint, getAzureCredential(), nil)
 	}
 	if err != nil {
-		l.Fatal().Err(err).Msg("error creating azure blob storage client")
+		log.Fatal().Err(err).Msg("error creating azure blob storage client")
 	}
 
 	return client
+}
+
+func getAzureCredential() *azidentity.DefaultAzureCredential {
+	once.Do(func() {
+		c, err := azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			log.Fatal().Err(err).Msg("error getting azure credential")
+		}
+		credential = c
+	})
+	return credential
 }

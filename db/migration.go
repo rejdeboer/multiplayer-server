@@ -1,13 +1,10 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"log"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -21,7 +18,7 @@ func main() {
 
 	environment := os.Getenv("ENVIRONMENT")
 	if environment != "local" && environment != "" {
-		settings.Database.Password = getAzAccessToken()
+		settings.Database.Password = application.GetDatabaseAccessToken()
 	}
 
 	db, err := sql.Open("pgx", application.GetDbConnectionString(settings.Database))
@@ -44,18 +41,4 @@ func main() {
 
 	migrate.Up()
 	log.Println("migrated database")
-}
-
-func getAzAccessToken() string {
-	credential, err := azidentity.NewWorkloadIdentityCredential(nil)
-	if err != nil {
-		log.Fatalf("could not get azwi credential: %s", err)
-	}
-	token, err := credential.GetToken(context.Background(), policy.TokenRequestOptions{
-		Scopes: []string{"https://ossrdbms-aad.database.windows.net/.default"},
-	})
-	if err != nil {
-		log.Fatalf("could not get az access token: %s", err)
-	}
-	return token.Token
 }
