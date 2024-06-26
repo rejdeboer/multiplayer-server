@@ -213,7 +213,7 @@ func (env *Env) updateUserImage(w http.ResponseWriter, r *http.Request) {
 	_, err = env.Blob.UploadBuffer(
 		ctx,
 		USER_IMAGES_CONTAINER,
-		userID.String(),
+		userID.String()+"."+fileExtension,
 		imageBytes,
 		&blockblob.UploadFileOptions{},
 	)
