@@ -1,5 +1,5 @@
 #!/bin/sh
-docker-compose up -d elasticsearch kafka init-kafka kafka-connect
+docker-compose up -d elasticsearch kafka init-kafka kafka-connect websocket-api http-api postgres postgres-migration
 
 # Wait till Elasticsearch is up
 until curl -sS 'http://localhost:9200/_cat/health?h=status' | grep -q 'green\|yellow'; do
